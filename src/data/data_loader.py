@@ -1,146 +1,263 @@
 """
-Data loader module for rainfall forecasting project.
-Handles data loading, validation, and initial preprocessing.
+Enhanced Data Acquisition & Integration Module
+Handles loading, validation, and integration of rainfall datasets.
 """
 
 import pandas as pd
 import numpy as np
-from pathlib import Path
-from typing import Tuple, Dict, List, Optional
 import logging
-from datetime import datetime
-import yaml
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
+from pathlib import Path
+from typing import Tuple, Dict, List
+import warnings
 
 class DataLoader:
-    """Handles data loading and validation for rainfall forecasting."""
+    """
+    Enhanced data loader with robust error handling and validation.
+    Cost-efficient approach using existing datasets without external API calls.
+    """
     
-    def __init__(self, config_path: str = "config/config.yaml"):
-        """Initialize DataLoader with configuration."""
-        self.config = self._load_config(config_path)
-        self.data_config = self.config['data']
-        self.preprocessing_config = self.config['preprocessing']
-        
-    def _load_config(self, config_path: str) -> Dict:
-        """Load configuration from YAML file."""
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-    
-    def load_data(self) -> pd.DataFrame:
+    def __init__(self, data_dir: str = "data/raw"):
         """
-        Load and merge both CSV files.
-        
-        Returns:
-            pd.DataFrame: Merged dataset
-        """
-        logger.info("Loading data files...")
-        
-        # Construct file paths
-        raw_path = Path(self.data_config['raw_path'])
-        file1_path = raw_path / self.data_config['file1']
-        file2_path = raw_path / self.data_config['file2']
-        
-        # Load datasets
-        try:
-            df1 = pd.read_csv(file1_path)
-            df2 = pd.read_csv(file2_path)
-            logger.info(f"Loaded {len(df1)} records from {self.data_config['file1']}")
-            logger.info(f"Loaded {len(df2)} records from {self.data_config['file2']}")
-        except Exception as e:
-            logger.error(f"Error loading data files: {e}")
-            raise
-        
-        # Merge datasets and remove duplicates
-        df_merged = pd.concat([df1, df2], ignore_index=True)
-        initial_count = len(df_merged)
-        
-        # Remove duplicates
-        df_merged = df_merged.drop_duplicates()
-        duplicate_count = initial_count - len(df_merged)
-        
-        if duplicate_count > 0:
-            logger.info(f"Removed {duplicate_count} duplicate records")
-        
-        # Sort by date
-        df_merged['Date'] = pd.to_datetime(df_merged['Date'])
-        df_merged = df_merged.sort_values('Date').reset_index(drop=True)
-        
-        logger.info(f"Final dataset contains {len(df_merged)} records")
-        
-        return df_merged
-    
-    def validate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Validate data schema and ranges.
+        Initialize DataLoader with data directory path.
         
         Args:
-            df: Input DataFrame
+            data_dir: Path to raw data directory
+        """
+        self.data_dir = Path(data_dir)
+        self.logger = logging.getLogger(__name__)
+        
+        # Expected data schema
+        self.expected_columns = [
+            'Date', 'Temp_avg', 'Relative_Humidity', 
+            'Wind_kmh', 'Precipitation_mm', 'Week_Number', 'Year'
+        ]
+        
+        # Data validation ranges
+        self.validation_ranges = {
+            'Temp_avg': (20, 35),           # Temperature in °C
+            'Relative_Humidity': (0, 100),  # Humidity in %
+            'Wind_kmh': (0, 15),            # Wind speed in km/h
+            'Precipitation_mm': (0, 400)    # Precipitation in mm
+        }
+        
+    def load_csv_with_validation(self, file_path: Path) -> pd.DataFrame:
+        """
+        Load CSV file with comprehensive validation.
+        
+        Args:
+            file_path: Path to CSV file
             
         Returns:
-            pd.DataFrame: Validated DataFrame
+            Validated DataFrame
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If validation fails
         """
-        logger.info("Validating data...")
-        
-        # Check required columns
-        required_columns = ['Date', 'Temp_avg', 'Relative_Humidity', 
-                          'Wind_kmh', 'Precipitation_mm', 'Week_Number', 'Year']
-        
-        missing_cols = set(required_columns) - set(df.columns)
-        if missing_cols:
-            raise ValueError(f"Missing required columns: {missing_cols}")
-        
-        # Validate data types
-        df['Date'] = pd.to_datetime(df['Date'])
-        numeric_cols = ['Temp_avg', 'Relative_Humidity', 'Wind_kmh', 'Precipitation_mm']
-        
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Log validation summary
-        logger.info("Data validation completed successfully")
-        self._log_data_summary(df)
-        
-        return df
+        try:
+            # Check file exists
+            if not file_path.exists():
+                raise FileNotFoundError(f"Data file not found: {file_path}")
+            
+            # Load CSV
+            df = pd.read_csv(file_path)
+            self.logger.info(f"Loaded {len(df)} records from {file_path.name}")
+            
+            # Validate schema
+            self._validate_schema(df, file_path.name)
+            
+            # Validate data ranges
+            self._validate_ranges(df, file_path.name)
+            
+            # Convert Date column
+            df['Date'] = pd.to_datetime(df['Date'])
+            
+            return df
+            
+        except Exception as e:
+            self.logger.error(f"Error loading {file_path}: {str(e)}")
+            raise
     
-    def _log_data_summary(self, df: pd.DataFrame):
-        """Log summary statistics of the dataset."""
-        logger.info("\n=== Data Summary ===")
-        logger.info(f"Date range: {df['Date'].min()} to {df['Date'].max()}")
-        logger.info(f"Number of records: {len(df)}")
-        logger.info(f"Number of features: {len(df.columns)}")
+    def _validate_schema(self, df: pd.DataFrame, filename: str) -> None:
+        """
+        Validate DataFrame schema against expected columns.
         
-        # Check for missing values
-        missing_counts = df.isnull().sum()
-        if missing_counts.any():
-            logger.warning("Missing values detected:")
-            for col, count in missing_counts[missing_counts > 0].items():
-                logger.warning(f"  {col}: {count} ({count/len(df)*100:.1f}%)")
+        Args:
+            df: DataFrame to validate
+            filename: Name of file for error reporting
+        """
+        missing_cols = set(self.expected_columns) - set(df.columns)
+        if missing_cols:
+            raise ValueError(f"Missing columns in {filename}: {missing_cols}")
+        
+        extra_cols = set(df.columns) - set(self.expected_columns)
+        if extra_cols:
+            self.logger.warning(f"Extra columns in {filename}: {extra_cols}")
+        
+        self.logger.info(f"Schema validation passed for {filename}")
+    
+    def _validate_ranges(self, df: pd.DataFrame, filename: str) -> None:
+        """
+        Validate data ranges for key variables.
+        
+        Args:
+            df: DataFrame to validate
+            filename: Name of file for error reporting
+        """
+        validation_results = {}
+        
+        for column, (min_val, max_val) in self.validation_ranges.items():
+            if column in df.columns:
+                out_of_range = df[
+                    (df[column] < min_val) | (df[column] > max_val)
+                ][column]
+                
+                if len(out_of_range) > 0:
+                    validation_results[column] = {
+                        'count': len(out_of_range),
+                        'percentage': (len(out_of_range) / len(df)) * 100,
+                        'values': out_of_range.tolist()
+                    }
+                    
+                    self.logger.warning(
+                        f"{filename}: {len(out_of_range)} values out of range "
+                        f"for {column} ({validation_results[column]['percentage']:.2f}%)"
+                    )
+        
+        self.logger.info(f"Range validation completed for {filename}")
+        return validation_results
+    
+    def detect_duplicates(self, df1: pd.DataFrame, df2: pd.DataFrame) -> Dict:
+        """
+        Detect duplicates between two DataFrames.
+        
+        Args:
+            df1: First DataFrame
+            df2: Second DataFrame
+            
+        Returns:
+            Dictionary with duplicate detection results
+        """
+        # Find exact duplicates
+        merged = pd.concat([df1, df2], ignore_index=True)
+        duplicates = merged[merged.duplicated(keep=False)]
+        
+        # Find date overlaps
+        date_overlap = set(df1['Date']).intersection(set(df2['Date']))
+        
+        results = {
+            'exact_duplicates': len(duplicates),
+            'date_overlaps': len(date_overlap),
+            'overlap_dates': sorted(list(date_overlap))
+        }
+        
+        self.logger.info(f"Duplicate detection: {results['exact_duplicates']} exact, "
+                        f"{results['date_overlaps']} date overlaps")
+        
+        return results
+    
+    def merge_datasets(self, df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
+        """
+        Merge two datasets with duplicate handling.
+        
+        Args:
+            df1: First DataFrame (primary)
+            df2: Second DataFrame (validation)
+            
+        Returns:
+            Merged DataFrame
+        """
+        # Detect duplicates first
+        dup_results = self.detect_duplicates(df1, df2)
+        
+        if dup_results['exact_duplicates'] > 0:
+            self.logger.info("Found exact duplicates - using for validation")
+            # If exact duplicates exist, prioritize df1
+            merged = pd.concat([df1, df2], ignore_index=True)
+            merged = merged.drop_duplicates(keep='first')
         else:
-            logger.info("No missing values detected")
+            # If no exact duplicates, merge all data
+            merged = pd.concat([df1, df2], ignore_index=True)
+        
+        # Sort by date
+        merged = merged.sort_values('Date').reset_index(drop=True)
+        
+        self.logger.info(f"Merged dataset: {len(merged)} total records")
+        return merged
     
     def load_and_validate_data(self) -> pd.DataFrame:
         """
-        Load and validate data in one step.
+        Main method to load and validate all data with error handling.
         
         Returns:
-            pd.DataFrame: Loaded and validated dataset
+            Validated and merged DataFrame
         """
-        df = self.load_data()
-        df = self.validate_data(df)
+        try:
+            # Define file paths
+            file1 = self.data_dir / "230731665812CCD_weekly1.csv"
+            file2 = self.data_dir / "230731450378CCD_weekly2.csv"
+            
+            # Load both files
+            self.logger.info("Loading primary dataset...")
+            df1 = self.load_csv_with_validation(file1)
+            
+            self.logger.info("Loading validation dataset...")
+            df2 = self.load_csv_with_validation(file2)
+            
+            # Merge datasets
+            self.logger.info("Merging datasets...")
+            df_merged = self.merge_datasets(df1, df2)
+            
+            # Final validation
+            self._perform_final_validation(df_merged)
+            
+            self.logger.info("Data loading and validation completed successfully")
+            return df_merged
+            
+        except Exception as e:
+            self.logger.error(f"Data loading failed: {str(e)}")
+            raise
+    
+    def _perform_final_validation(self, df: pd.DataFrame) -> None:
+        """
+        Perform final validation checks on merged dataset.
         
-        # Save interim data
-        interim_path = Path(self.data_config['interim_path'])
-        interim_path.mkdir(parents=True, exist_ok=True)
+        Args:
+            df: Merged DataFrame to validate
+        """
+        # Check for missing values
+        missing_summary = df.isnull().sum()
+        if missing_summary.sum() > 0:
+            self.logger.warning(f"Missing values found:\n{missing_summary}")
         
-        output_file = interim_path / 'merged_validated_data.csv'
-        df.to_csv(output_file, index=False)
-        logger.info(f"Saved validated data to {output_file}")
+        # Check date range
+        date_range = (df['Date'].min(), df['Date'].max())
+        self.logger.info(f"Date range: {date_range[0]} to {date_range[1]}")
         
-        return df
+        # Check data completeness
+        expected_weeks = (date_range[1] - date_range[0]).days // 7
+        actual_weeks = len(df)
+        completeness = (actual_weeks / expected_weeks) * 100
+        
+        self.logger.info(f"Data completeness: {completeness:.1f}% "
+                        f"({actual_weeks}/{expected_weeks} weeks)")
+        
+        # Summary statistics
+        numeric_cols = ['Temp_avg', 'Relative_Humidity', 'Wind_kmh', 'Precipitation_mm']
+        summary = df[numeric_cols].describe()
+        self.logger.info(f"Summary statistics:\n{summary}")
+    
+    def save_processed_data(self, df: pd.DataFrame, 
+                           filepath: str = "data/interim/merged_data.csv") -> None:
+        """
+        Save processed data to interim directory.
+        
+        Args:
+            df: DataFrame to save
+            filepath: Output file path
+        """
+        output_path = Path(filepath)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        df.to_csv(output_path, index=False)
+        self.logger.info(f"Saved merged data to {output_path}")

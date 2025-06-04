@@ -1,396 +1,492 @@
 """
-Visualization module for rainfall forecasting project.
-Creates plots and figures for analysis and reporting.
+Visualization & Automation Module
+Automated plot generation with LaTeX integration.
 """
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import numpy as np
-from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
 import tikzplotlib
 import logging
-from typing import Dict, List, Tuple, Optional
+from pathlib import Path
+from typing import Dict, List, Tuple, Any
 import warnings
 warnings.filterwarnings('ignore')
 
-logger = logging.getLogger(__name__)
-
-# Set style for consistent plots
-try:
-    plt.style.use('seaborn-v0_8')
-except OSError:
-    plt.style.use('seaborn')
-sns.set_palette("husl")
-
-
 class RainfallVisualizer:
-    """Handles all visualization tasks for the rainfall forecasting project."""
+    """
+    Comprehensive visualization generator with LaTeX integration.
+    """
     
-    def __init__(self, output_dir: str = "reports/figures"):
+    def __init__(self, figures_dir: str = "reports/figures"):
         """
         Initialize visualizer.
         
         Args:
-            output_dir: Directory to save figures
+            figures_dir: Directory to save figures
         """
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.figures_dir = Path(figures_dir)
+        self.figures_dir.mkdir(parents=True, exist_ok=True)
         
-    def plot_time_series(self, data: pd.DataFrame, date_col: str = 'Date', 
-                        target_col: str = 'Precipitation_mm', 
-                        title: str = "Rainfall Time Series") -> str:
-        """
-        Plot time series of rainfall data.
+        self.logger = logging.getLogger(__name__)
         
-        Args:
-            data: DataFrame containing time series data
-            date_col: Name of date column
-            target_col: Name of target variable column
-            title: Plot title
-            
-        Returns:
-            Path to saved figure
-        """
-        fig, ax = plt.subplots(figsize=(12, 6))
+        # Set matplotlib style
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
         
-        ax.plot(data[date_col], data[target_col], linewidth=1, alpha=0.7)
-        ax.set_title(title, fontsize=14, fontweight='bold')
-        ax.set_xlabel('Date', fontsize=12)
-        ax.set_ylabel('Precipitation (mm)', fontsize=12)
-        ax.grid(True, alpha=0.3)
-        
-        # Add trend line
-        x_numeric = np.arange(len(data))
-        z = np.polyfit(x_numeric, data[target_col], 1)
-        p = np.poly1d(z)
-        ax.plot(data[date_col], p(x_numeric), "r--", alpha=0.8, 
-                label=f'Trend (slope: {z[0]:.4f})')
-        ax.legend()
-        
-        plt.tight_layout()
-        
-        # Save plot
-        filename = "rainfall_time_series.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
-        
-        # Save as LaTeX/PGF
-        tikz_filepath = self.output_dir / "rainfall_time_series.tex"
-        tikzplotlib.save(tikz_filepath)
-        
-        plt.close()
-        logger.info(f"Saved time series plot to {filepath}")
-        
-        return str(filepath)    
-    def plot_correlation_matrix(self, data: pd.DataFrame, 
-                               title: str = "Feature Correlation Matrix") -> str:
-        """
-        Plot correlation matrix heatmap.
-        
-        Args:
-            data: DataFrame with features
-            title: Plot title
-            
-        Returns:
-            Path to saved figure
-        """
-        # Select only numeric columns
-        numeric_cols = data.select_dtypes(include=[np.number]).columns
-        corr_matrix = data[numeric_cols].corr()
-        
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
-        # Create heatmap
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0,
-                   square=True, ax=ax, fmt='.2f', cbar_kws={'shrink': 0.8})
-        
-        ax.set_title(title, fontsize=14, fontweight='bold')
-        plt.tight_layout()
-        
-        # Save plot
-        filename = "correlation_matrix.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
-        
-        # Save as LaTeX/PGF
-        tikz_filepath = self.output_dir / "correlation_matrix.tex"
-        tikzplotlib.save(tikz_filepath)
-        
-        plt.close()
-        logger.info(f"Saved correlation matrix to {filepath}")
-        
-        return str(filepath)
+        # Configure matplotlib for LaTeX
+        plt.rcParams.update({
+            'font.size': 12,
+            'axes.titlesize': 14,
+            'axes.labelsize': 12,
+            'xtick.labelsize': 10,
+            'ytick.labelsize': 10,
+            'legend.fontsize': 10,
+            'figure.titlesize': 16
+        })
     
-    def plot_model_comparison(self, comparison_df: pd.DataFrame, 
-                             metric: str = 'RMSE',
-                             title: str = "Model Performance Comparison") -> str:
+    def plot_time_series_comparison(self, df: pd.DataFrame, 
+                                   predictions: Dict[str, Any],
+                                   model_name: str = 'best_model') -> str:
         """
-        Plot model comparison bar chart.
+        Create time series plot comparing actual vs predicted rainfall.
+        
+        Args:
+            df: Processed DataFrame with dates
+            predictions: Dictionary of model predictions
+            model_name: Name of model to plot
+            
+        Returns:
+            Path to saved plot
+        """
+        fig, ax = plt.subplots(figsize=(15, 8))
+        
+        # Get prediction data
+        if model_name in predictions:
+            pred_data = predictions[model_name]
+            
+            # Create date index for plotting (use last portion of dates)
+            dates = df['Date'].tail(len(pred_data['y_true']))
+            
+            # Plot actual vs predicted
+            ax.plot(dates, pred_data['y_true'], 
+                   label='Actual Rainfall', linewidth=2, alpha=0.8)
+            ax.plot(dates, pred_data['y_pred'], 
+                   label='Predicted Rainfall', linewidth=2, alpha=0.8)
+            
+            # Add confidence bands
+            residuals = pred_data['residuals']
+            std_residual = np.std(residuals)
+            upper_bound = pred_data['y_pred'] + 1.96 * std_residual
+            lower_bound = pred_data['y_pred'] - 1.96 * std_residual
+            
+            ax.fill_between(dates, lower_bound, upper_bound, 
+                           alpha=0.2, label='95% Confidence Interval')
+            
+            # Formatting
+            ax.set_title(f'Rainfall Forecasting: Actual vs Predicted ({model_name.title()})', 
+                        fontsize=16, fontweight='bold')
+            ax.set_xlabel('Date', fontsize=12)
+            ax.set_ylabel('Precipitation (mm)', fontsize=12)
+            ax.legend(loc='upper right')
+            ax.grid(True, alpha=0.3)
+            
+            # Rotate x-axis labels
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            
+            # Save plot
+            plot_path = self.figures_dir / f"time_series_{model_name}.png"
+            plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+            
+            # Convert to LaTeX
+            latex_path = self.figures_dir / f"time_series_{model_name}.tex"
+            tikzplotlib.save(latex_path)
+            
+            plt.close()
+            
+            self.logger.info(f"Time series plot saved: {plot_path}")
+            return str(plot_path)
+        
+        else:
+            self.logger.warning(f"Model {model_name} not found in predictions")
+            return ""
+    
+    def plot_scatter_actual_vs_predicted(self, predictions: Dict[str, Any]) -> str:
+        """
+        Create scatter plots of predicted vs actual values for all models.
+        
+        Args:
+            predictions: Dictionary of model predictions
+            
+        Returns:
+            Path to saved plot
+        """
+        n_models = len(predictions)
+        cols = 3
+        rows = (n_models + cols - 1) // cols
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(15, 5*rows))
+        if n_models == 1:
+            axes = [axes]
+        elif rows == 1:
+            axes = axes.reshape(1, -1)
+        
+        for idx, (model_name, pred_data) in enumerate(predictions.items()):
+            row = idx // cols
+            col = idx % cols
+            ax = axes[row, col] if rows > 1 else axes[col]
+            
+            y_true = pred_data['y_true']
+            y_pred = pred_data['y_pred']
+            
+            # Scatter plot
+            ax.scatter(y_true, y_pred, alpha=0.6, s=50)
+            
+            # Perfect prediction line
+            min_val = min(min(y_true), min(y_pred))
+            max_val = max(max(y_true), max(y_pred))
+            ax.plot([min_val, max_val], [min_val, max_val], 
+                   'r--', linewidth=2, label='Perfect Prediction')
+            
+            # Calculate R²
+            r2 = np.corrcoef(y_true, y_pred)[0, 1]**2
+            
+            ax.set_title(f'{model_name.title()} (R² = {r2:.4f})', fontweight='bold')
+            ax.set_xlabel('Actual Precipitation (mm)')
+            ax.set_ylabel('Predicted Precipitation (mm)')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+        
+        # Hide unused subplots
+        for idx in range(n_models, rows * cols):
+            row = idx // cols
+            col = idx % cols
+            if rows > 1:
+                axes[row, col].set_visible(False)
+            else:
+                axes[col].set_visible(False)
+        
+        plt.suptitle('Actual vs Predicted Rainfall Comparison', 
+                    fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        
+        # Save plot
+        plot_path = self.figures_dir / "scatter_actual_vs_predicted.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        
+        # Convert to LaTeX
+        latex_path = self.figures_dir / "scatter_actual_vs_predicted.tex"
+        tikzplotlib.save(latex_path)
+        
+        plt.close()
+        
+        self.logger.info(f"Scatter plot saved: {plot_path}")
+        return str(plot_path)
+    
+    def plot_model_performance_comparison(self, comparison_df: pd.DataFrame) -> str:
+        """
+        Create bar chart comparing model performance.
         
         Args:
             comparison_df: DataFrame with model comparison results
-            metric: Metric to plot
-            title: Plot title
             
         Returns:
-            Path to saved figure
+            Path to saved plot
         """
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
         
-        # Create bar plot
-        bars = ax.bar(comparison_df.index, comparison_df[metric], 
-                     color='skyblue', alpha=0.8, edgecolor='navy')
+        models = comparison_df.index
+        
+        # RMSE comparison
+        bars1 = ax1.bar(models, comparison_df['RMSE'], 
+                       color=sns.color_palette("husl", len(models)))
+        ax1.set_title('Root Mean Square Error (RMSE)', fontweight='bold')
+        ax1.set_ylabel('RMSE')
+        ax1.tick_params(axis='x', rotation=45)
         
         # Add value labels on bars
-        for bar in bars:
+        for bar in bars1:
             height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{height:.4f}', ha='center', va='bottom', fontweight='bold')
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.4f}', ha='center', va='bottom', fontsize=10)
         
-        ax.set_title(title, fontsize=14, fontweight='bold')
-        ax.set_xlabel('Models', fontsize=12)
-        ax.set_ylabel(metric, fontsize=12)
-        ax.grid(True, alpha=0.3, axis='y')
+        # MAE comparison
+        bars2 = ax2.bar(models, comparison_df['MAE'],
+                       color=sns.color_palette("husl", len(models)))
+        ax2.set_title('Mean Absolute Error (MAE)', fontweight='bold')
+        ax2.set_ylabel('MAE')
+        ax2.tick_params(axis='x', rotation=45)
         
-        # Rotate x-axis labels for better readability
-        plt.xticks(rotation=45, ha='right')
+        for bar in bars2:
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.4f}', ha='center', va='bottom', fontsize=10)
+        
+        # R² comparison
+        bars3 = ax3.bar(models, comparison_df['R2'],
+                       color=sns.color_palette("husl", len(models)))
+        ax3.set_title('Coefficient of Determination (R²)', fontweight='bold')
+        ax3.set_ylabel('R²')
+        ax3.tick_params(axis='x', rotation=45)
+        
+        for bar in bars3:
+            height = bar.get_height()
+            ax3.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.4f}', ha='center', va='bottom', fontsize=10)
+        
+        # MAPE comparison
+        bars4 = ax4.bar(models, comparison_df['MAPE'],
+                       color=sns.color_palette("husl", len(models)))
+        ax4.set_title('Mean Absolute Percentage Error (MAPE)', fontweight='bold')
+        ax4.set_ylabel('MAPE (%)')
+        ax4.tick_params(axis='x', rotation=45)
+        
+        for bar in bars4:
+            height = bar.get_height()
+            ax4.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.2f}%', ha='center', va='bottom', fontsize=10)
+        
+        plt.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold')
         plt.tight_layout()
         
         # Save plot
-        filename = "model_comparison.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plot_path = self.figures_dir / "model_performance_comparison.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Save as LaTeX/PGF
-        tikz_filepath = self.output_dir / "model_comparison.tex"
-        tikzplotlib.save(tikz_filepath)
+        # Convert to LaTeX
+        latex_path = self.figures_dir / "model_performance_comparison.tex"
+        tikzplotlib.save(latex_path)
         
         plt.close()
-        logger.info(f"Saved model comparison plot to {filepath}")
         
-        return str(filepath)
+        self.logger.info(f"Performance comparison plot saved: {plot_path}")
+        return str(plot_path)
     
-    def plot_predictions_vs_actual(self, y_true: np.ndarray, y_pred: np.ndarray,
-                                  model_name: str, 
-                                  title: str = None) -> str:
+    def plot_residual_analysis(self, predictions: Dict[str, Any]) -> str:
         """
-        Plot predicted vs actual values scatter plot.
+        Create residual plots for error analysis.
         
         Args:
-            y_true: True values
-            y_pred: Predicted values
-            model_name: Name of the model
-            title: Plot title
+            predictions: Dictionary of model predictions
             
         Returns:
-            Path to saved figure
+            Path to saved plot
         """
-        if title is None:
-            title = f"Predicted vs Actual - {model_name}"
+        n_models = len(predictions)
+        cols = 2
+        rows = (n_models + cols - 1) // cols
         
-        fig, ax = plt.subplots(figsize=(8, 8))
+        fig, axes = plt.subplots(rows, cols, figsize=(15, 6*rows))
+        if n_models == 1:
+            axes = [axes]
+        elif rows == 1:
+            axes = axes.reshape(1, -1)
         
-        # Scatter plot
-        ax.scatter(y_true, y_pred, alpha=0.6, s=50)
-        
-        # Perfect prediction line (y = x)
-        min_val = min(min(y_true), min(y_pred))
-        max_val = max(max(y_true), max(y_pred))
-        ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, 
-                label='Perfect Prediction')
-        
-        # Calculate R²
-        from sklearn.metrics import r2_score
-        r2 = r2_score(y_true, y_pred)
-        
-        ax.set_title(f"{title}\nR² = {r2:.4f}", fontsize=14, fontweight='bold')
-        ax.set_xlabel('Actual Values', fontsize=12)
-        ax.set_ylabel('Predicted Values', fontsize=12)
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        
-        # Save plot
-        filename = f"predictions_vs_actual_{model_name.lower()}.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
-        
-        # Save as LaTeX/PGF
-        tikz_filepath = self.output_dir / f"predictions_vs_actual_{model_name.lower()}.tex"
-        tikzplotlib.save(tikz_filepath)
-        
-        plt.close()
-        logger.info(f"Saved predictions vs actual plot to {filepath}")
-        
-        return str(filepath)
-    
-    def plot_residuals(self, y_true: np.ndarray, y_pred: np.ndarray,
-                      model_name: str, title: str = None) -> str:
-        """
-        Plot residual analysis.
-        
-        Args:
-            y_true: True values
-            y_pred: Predicted values
-            model_name: Name of the model
-            title: Plot title
+        for idx, (model_name, pred_data) in enumerate(predictions.items()):
+            row = idx // cols
+            col = idx % cols
+            ax = axes[row, col] if rows > 1 else axes[col]
             
-        Returns:
-            Path to saved figure
-        """
-        if title is None:
-            title = f"Residual Analysis - {model_name}"
+            residuals = pred_data['residuals']
+            y_pred = pred_data['y_pred']
+            
+            # Residual scatter plot
+            ax.scatter(y_pred, residuals, alpha=0.6, s=30)
+            ax.axhline(y=0, color='r', linestyle='--', linewidth=2)
+            
+            ax.set_title(f'{model_name.title()} - Residual Analysis', fontweight='bold')
+            ax.set_xlabel('Predicted Values')
+            ax.set_ylabel('Residuals')
+            ax.grid(True, alpha=0.3)
+            
+            # Add statistics
+            mean_residual = np.mean(residuals)
+            std_residual = np.std(residuals)
+            ax.text(0.05, 0.95, f'Mean: {mean_residual:.4f}\nStd: {std_residual:.4f}',
+                   transform=ax.transAxes, verticalalignment='top',
+                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
         
-        residuals = y_true - y_pred
+        # Hide unused subplots
+        for idx in range(n_models, rows * cols):
+            row = idx // cols
+            col = idx % cols
+            if rows > 1:
+                axes[row, col].set_visible(False)
+            else:
+                axes[col].set_visible(False)
         
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 10))
-        
-        # 1. Residuals vs Predicted
-        ax1.scatter(y_pred, residuals, alpha=0.6)
-        ax1.axhline(y=0, color='r', linestyle='--')
-        ax1.set_title('Residuals vs Predicted')
-        ax1.set_xlabel('Predicted Values')
-        ax1.set_ylabel('Residuals')
-        ax1.grid(True, alpha=0.3)
-        
-        # 2. Histogram of residuals
-        ax2.hist(residuals, bins=20, alpha=0.7, edgecolor='black')
-        ax2.set_title('Distribution of Residuals')
-        ax2.set_xlabel('Residuals')
-        ax2.set_ylabel('Frequency')
-        ax2.grid(True, alpha=0.3)
-        
-        # 3. Q-Q plot
-        from scipy import stats
-        stats.probplot(residuals, dist="norm", plot=ax3)
-        ax3.set_title('Q-Q Plot')
-        ax3.grid(True, alpha=0.3)
-        
-        # 4. Residuals vs Index (time series)
-        ax4.plot(residuals, alpha=0.7)
-        ax4.axhline(y=0, color='r', linestyle='--')
-        ax4.set_title('Residuals vs Index')
-        ax4.set_xlabel('Index')
-        ax4.set_ylabel('Residuals')
-        ax4.grid(True, alpha=0.3)
-        
-        plt.suptitle(title, fontsize=16, fontweight='bold')
+        plt.suptitle('Residual Analysis for All Models', fontsize=16, fontweight='bold')
         plt.tight_layout()
         
         # Save plot
-        filename = f"residuals_{model_name.lower()}.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plot_path = self.figures_dir / "residual_analysis.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        
+        # Convert to LaTeX
+        latex_path = self.figures_dir / "residual_analysis.tex"
+        tikzplotlib.save(latex_path)
         
         plt.close()
-        logger.info(f"Saved residual analysis plot to {filepath}")
         
-        return str(filepath)
+        self.logger.info(f"Residual analysis plot saved: {plot_path}")
+        return str(plot_path)
     
-    def plot_feature_importance(self, feature_names: List[str], 
-                               importance_values: np.ndarray,
-                               model_name: str, title: str = None) -> str:
+    def plot_feature_importance(self, importance_data: Dict[str, np.ndarray],
+                               feature_names: List[str]) -> str:
         """
-        Plot feature importance.
+        Create feature importance plots.
         
         Args:
+            importance_data: Dictionary of feature importance arrays
             feature_names: List of feature names
-            importance_values: Array of importance values
-            model_name: Name of the model
-            title: Plot title
             
         Returns:
-            Path to saved figure
+            Path to saved plot
         """
-        if title is None:
-            title = f"Feature Importance - {model_name}"
+        if not importance_data:
+            self.logger.warning("No feature importance data available")
+            return ""
         
-        # Sort features by importance
-        indices = np.argsort(importance_values)[::-1]
-        sorted_features = [feature_names[i] for i in indices]
-        sorted_importance = importance_values[indices]
+        n_models = len(importance_data)
+        fig, axes = plt.subplots(1, n_models, figsize=(8*n_models, 10))
         
-        fig, ax = plt.subplots(figsize=(10, 8))
+        if n_models == 1:
+            axes = [axes]
         
-        # Create horizontal bar plot
-        bars = ax.barh(range(len(sorted_features)), sorted_importance, 
-                      color='lightcoral', alpha=0.8)
+        for idx, (model_name, importance) in enumerate(importance_data.items()):
+            ax = axes[idx]
+            
+            # Sort features by importance
+            sorted_idx = np.argsort(importance)[::-1]
+            sorted_features = [feature_names[i] for i in sorted_idx]
+            sorted_importance = importance[sorted_idx]
+            
+            # Create horizontal bar plot
+            y_pos = np.arange(len(sorted_features))
+            bars = ax.barh(y_pos, sorted_importance)
+            
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(sorted_features)
+            ax.set_xlabel('Feature Importance')
+            ax.set_title(f'{model_name.title()} Feature Importance', fontweight='bold')
+            
+            # Add value labels
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                ax.text(width, bar.get_y() + bar.get_height()/2.,
+                       f'{width:.3f}', ha='left', va='center', fontsize=9)
+            
+            ax.grid(True, alpha=0.3, axis='x')
         
-        ax.set_title(title, fontsize=14, fontweight='bold')
-        ax.set_xlabel('Importance', fontsize=12)
-        ax.set_yticks(range(len(sorted_features)))
-        ax.set_yticklabels(sorted_features)
-        ax.grid(True, alpha=0.3, axis='x')
-        
-        # Add value labels
-        for i, bar in enumerate(bars):
-            width = bar.get_width()
-            ax.text(width, bar.get_y() + bar.get_height()/2,
-                   f'{width:.3f}', ha='left', va='center')
-        
+        plt.suptitle('Feature Importance Comparison', fontsize=16, fontweight='bold')
         plt.tight_layout()
         
         # Save plot
-        filename = f"feature_importance_{model_name.lower()}.png"
-        filepath = self.output_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plot_path = self.figures_dir / "feature_importance.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Save as LaTeX/PGF
-        tikz_filepath = self.output_dir / f"feature_importance_{model_name.lower()}.tex"
-        tikzplotlib.save(tikz_filepath)
+        # Convert to LaTeX
+        latex_path = self.figures_dir / "feature_importance.tex"
+        tikzplotlib.save(latex_path)
         
         plt.close()
-        logger.info(f"Saved feature importance plot to {filepath}")
         
-        return str(filepath)
+        self.logger.info(f"Feature importance plot saved: {plot_path}")
+        return str(plot_path)
     
-    def generate_all_plots(self, data: pd.DataFrame, 
+    def plot_correlation_matrix(self, df: pd.DataFrame) -> str:
+        """
+        Create correlation matrix heatmap.
+        
+        Args:
+            df: Processed DataFrame
+            
+        Returns:
+            Path to saved plot
+        """
+        # Select numeric columns for correlation
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        correlation_matrix = df[numeric_cols].corr()
+        
+        fig, ax = plt.subplots(figsize=(14, 12))
+        
+        # Create heatmap
+        mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
+        heatmap = sns.heatmap(correlation_matrix, mask=mask, annot=True, 
+                             cmap='coolwarm', center=0, square=True,
+                             fmt='.2f', cbar_kws={"shrink": .8})
+        
+        ax.set_title('Feature Correlation Matrix', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        
+        # Save plot
+        plot_path = self.figures_dir / "correlation_matrix.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        
+        # Convert to LaTeX
+        latex_path = self.figures_dir / "correlation_matrix.tex"
+        tikzplotlib.save(latex_path)
+        
+        plt.close()
+        
+        self.logger.info(f"Correlation matrix plot saved: {plot_path}")
+        return str(plot_path)
+    
+    def generate_all_plots(self, df_processed: pd.DataFrame, 
                           comparison_df: pd.DataFrame,
-                          predictions_dict: Dict) -> List[str]:
+                          predictions: Dict[str, Any],
+                          importance_data: Dict[str, np.ndarray] = None) -> List[str]:
         """
         Generate all visualization plots.
         
         Args:
-            data: Original dataset
+            df_processed: Processed DataFrame
             comparison_df: Model comparison results
-            predictions_dict: Dictionary of predictions for each model
+            predictions: Model predictions
+            importance_data: Feature importance data
             
         Returns:
             List of paths to generated plots
         """
+        self.logger.info("Generating all visualization plots...")
+        
         plot_paths = []
         
-        # Time series plot
-        if 'Date' in data.columns and 'Precipitation_mm' in data.columns:
-            path = self.plot_time_series(data)
+        # Time series comparison (best model)
+        best_model = comparison_df.index[0]
+        if best_model in predictions:
+            path = self.plot_time_series_comparison(df_processed, predictions, best_model)
+            if path:
+                plot_paths.append(path)
+        
+        # Scatter plots
+        path = self.plot_scatter_actual_vs_predicted(predictions)
+        if path:
             plot_paths.append(path)
+        
+        # Model performance comparison
+        path = self.plot_model_performance_comparison(comparison_df)
+        if path:
+            plot_paths.append(path)
+        
+        # Residual analysis
+        path = self.plot_residual_analysis(predictions)
+        if path:
+            plot_paths.append(path)
+        
+        # Feature importance (if available)
+        if importance_data:
+            feature_names = df_processed.columns.drop(['Date', 'Precipitation_mm', 'Year']).tolist()
+            path = self.plot_feature_importance(importance_data, feature_names)
+            if path:
+                plot_paths.append(path)
         
         # Correlation matrix
-        path = self.plot_correlation_matrix(data)
-        plot_paths.append(path)
-        
-        # Model comparison
-        if not comparison_df.empty:
-            path = self.plot_model_comparison(comparison_df)
+        path = self.plot_correlation_matrix(df_processed)
+        if path:
             plot_paths.append(path)
         
-        # Predictions vs actual and residuals for each model
-        for model_name, pred_data in predictions_dict.items():
-            if 'y_true' in pred_data and 'y_pred' in pred_data:
-                # Predictions vs actual
-                path = self.plot_predictions_vs_actual(
-                    pred_data['y_true'], pred_data['y_pred'], model_name
-                )
-                plot_paths.append(path)
-                
-                # Residual analysis
-                path = self.plot_residuals(
-                    pred_data['y_true'], pred_data['y_pred'], model_name
-                )
-                plot_paths.append(path)
-        
-        logger.info(f"Generated {len(plot_paths)} visualization plots")
-        
+        self.logger.info(f"Generated {len(plot_paths)} visualization plots")
         return plot_paths

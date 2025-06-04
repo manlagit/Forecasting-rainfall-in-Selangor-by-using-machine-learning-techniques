@@ -1,282 +1,425 @@
 """
-Model training module for rainfall forecasting.
-Implements various ML models with hyperparameter tuning.
+Model Implementation & Hyperparameter Tuning Module
+Comprehensive machine learning models with automated optimization.
 """
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.neighbors import KNeighborsRegressor
+import logging
+from typing import Dict, Tuple, Any, Optional
+from pathlib import Path
+import joblib
+import json
+from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
-from tensorflow import keras
-from tensorflow.keras import layers
-import optuna
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
-import joblib
-import logging
-import yaml
-from pathlib import Path
-from typing import Dict, Any, Tuple, List
 import warnings
 warnings.filterwarnings('ignore')
 
-logger = logging.getLogger(__name__)
-
+# Deep learning imports
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+import optuna
 
 class ModelTrainer:
-    """Handles model training and hyperparameter tuning."""
+    """
+    Comprehensive model trainer with hyperparameter optimization.
+    """
     
-    def __init__(self, config_path: str = "config/config.yaml"):
-        """Initialize trainer with configuration."""
-        self.config = self._load_config(config_path)
-        self.model_config = self.config['models']
-        self.models = {}
+    def __init__(self, models_dir: str = "models", random_state: int = 42):
+        """
+        Initialize model trainer.
+        
+        Args:
+            models_dir: Directory to save trained models
+            random_state: Random seed for reproducibility
+        """
+        self.models_dir = Path(models_dir)
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.logger = logging.getLogger(__name__)
+        self.random_state = random_state
+        
+        # Set random seeds
+        np.random.seed(random_state)
+        tf.random.set_seed(random_state)
+        
+        # Store trained models and best parameters
+        self.trained_models = {}
         self.best_params = {}
         
-    def _load_config(self, config_path: str) -> Dict:
-        """Load configuration from YAML file."""
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+        # Define hyperparameter grids
+        self._define_hyperparameter_grids()
     
-    def split_data(self, X: pd.DataFrame, y: pd.Series) -> Tuple:
+    def _define_hyperparameter_grids(self):
+        """Define hyperparameter grids for all models."""
+        
+        # KNN hyperparameters
+        self.knn_param_grid = {
+            'n_neighbors': [3, 5, 7, 9, 11, 15],
+            'weights': ['uniform', 'distance'],
+            'metric': ['euclidean', 'manhattan', 'minkowski'],
+            'p': [1, 2]
+        }
+        
+        # Random Forest hyperparameters
+        self.rf_param_grid = {
+            'n_estimators': [100, 200, 300, 500],
+            'max_depth': [10, 20, 30, 50, None],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4],
+            'max_features': ['auto', 'sqrt', 'log2']
+        }
+        
+        # XGBoost hyperparameters
+        self.xgb_param_grid = {
+            'n_estimators': [100, 200, 300],
+            'learning_rate': [0.01, 0.1, 0.2],
+            'max_depth': [3, 6, 9],
+            'subsample': [0.8, 0.9, 1.0],
+            'colsample_bytree': [0.8, 0.9, 1.0],
+            'reg_alpha': [0, 0.1, 1],
+            'reg_lambda': [1, 1.5, 2]
+        }
+        
+        # ANN hyperparameters for Optuna
+        self.ann_param_ranges = {
+            'n_layers': (2, 4),
+            'n_neurons': (32, 128),
+            'activation': ['relu', 'tanh', 'sigmoid'],
+            'learning_rate': (0.001, 0.1),
+            'batch_size': [16, 32, 64],
+            'epochs': [50, 100, 200],
+            'dropout_rate': (0.1, 0.3)
+        }
+    
+    def split_data(self, X: pd.DataFrame, y: pd.Series, 
+                   test_size: float = 0.2) -> Tuple:
         """
-        Split data into train and test sets maintaining chronological order.
+        Split data maintaining temporal order for time series.
+        
+        Args:
+            X: Feature matrix
+            y: Target vector
+            test_size: Proportion for testing
+            
+        Returns:
+            Tuple of train-test splits
         """
-        # Calculate split index
-        split_idx = int(len(X) * (1 - self.model_config['test_size']))
+        split_index = int(len(X) * (1 - test_size))
         
-        # Time series aware split
-        X_train = X.iloc[:split_idx]
-        X_test = X.iloc[split_idx:]
-        y_train = y.iloc[:split_idx]
-        y_test = y.iloc[split_idx:]
+        X_train = X.iloc[:split_index]
+        X_test = X.iloc[split_index:]
+        y_train = y.iloc[:split_index]
+        y_test = y.iloc[split_index:]
         
-        logger.info(f"Train set: {len(X_train)} samples")
-        logger.info(f"Test set: {len(X_test)} samples")
-        
+        self.logger.info(f"Data split - Train: {len(X_train)}, Test: {len(X_test)}")
         return X_train, X_test, y_train, y_test
     
-    def train_linear_regression(self, X_train: pd.DataFrame, y_train: pd.Series) -> LinearRegression:
-        """Train Multiple Linear Regression model."""
-        logger.info("Training Linear Regression model...")
+    def train_linear_regression(self, X_train: pd.DataFrame, 
+                               y_train: pd.Series) -> LinearRegression:
+        """
+        Train Multiple Linear Regression with feature selection.
+        
+        Args:
+            X_train: Training features
+            y_train: Training target
+            
+        Returns:
+            Trained model
+        """
+        self.logger.info("Training Multiple Linear Regression...")
         
         # Feature selection using RFE
-        estimator = LinearRegression()
-        selector = RFE(estimator, n_features_to_select=10, step=1)
-        selector.fit(X_train, y_train)
+        lr_base = LinearRegression()
+        rfe = RFE(estimator=lr_base, n_features_to_select=10)
+        rfe.fit(X_train, y_train)
+        
+        # Get selected features
+        selected_features = X_train.columns[rfe.support_].tolist()
+        self.logger.info(f"Selected features: {selected_features}")
         
         # Train final model with selected features
         model = LinearRegression()
-        model.fit(X_train.iloc[:, selector.support_], y_train)
+        model.fit(X_train[selected_features], y_train)
         
-        self.models['linear_regression'] = model
+        # Store selected features for prediction
         self.best_params['linear_regression'] = {
-            'selected_features': X_train.columns[selector.support_].tolist()
+            'selected_features': selected_features
         }
         
+        self.logger.info("Linear Regression training completed")
         return model
     
     def train_knn(self, X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsRegressor:
-        """Train KNN model with hyperparameter tuning."""
-        logger.info("Training KNN model...")
+        """
+        Train K-Nearest Neighbors with hyperparameter tuning.
         
-        param_grid = {
-            'n_neighbors': self.model_config['knn']['n_neighbors'],
-            'weights': self.model_config['knn']['weights'],
-            'metric': self.model_config['knn']['metric']
-        }
+        Args:
+            X_train: Training features
+            y_train: Training target
+            
+        Returns:
+            Trained model
+        """
+        self.logger.info("Training K-Nearest Neighbors with hyperparameter tuning...")
         
         knn = KNeighborsRegressor()
+        
+        # Grid search with cross-validation
         grid_search = GridSearchCV(
-            knn, param_grid, 
-            cv=self.model_config['cv_folds'],
+            knn, 
+            self.knn_param_grid,
+            cv=5,
             scoring='neg_mean_squared_error',
-            n_jobs=-1
-        )
-        
-        grid_search.fit(X_train, y_train)
-        
-        self.models['knn'] = grid_search.best_estimator_
-        self.best_params['knn'] = grid_search.best_params_
-        
-        logger.info(f"Best KNN params: {grid_search.best_params_}")
-        
-        return grid_search.best_estimator_    
-    def train_random_forest(self, X_train: pd.DataFrame, y_train: pd.Series) -> RandomForestRegressor:
-        """Train Random Forest model with hyperparameter tuning."""
-        logger.info("Training Random Forest model...")
-        
-        param_grid = {
-            'n_estimators': self.model_config['rf']['n_estimators'],
-            'max_depth': self.model_config['rf']['max_depth'],
-            'min_samples_split': self.model_config['rf']['min_samples_split'],
-            'min_samples_leaf': self.model_config['rf']['min_samples_leaf']
-        }
-        
-        rf = RandomForestRegressor(random_state=self.model_config['random_state'])
-        grid_search = GridSearchCV(
-            rf, param_grid, 
-            cv=self.model_config['cv_folds'],
-            scoring='neg_mean_squared_error',
-            n_jobs=-1
-        )
-        
-        grid_search.fit(X_train, y_train)
-        
-        self.models['random_forest'] = grid_search.best_estimator_
-        self.best_params['random_forest'] = grid_search.best_params_
-        
-        logger.info(f"Best RF params: {grid_search.best_params_}")
-        
-        return grid_search.best_estimator_
-    
-    def train_xgboost(self, X_train: pd.DataFrame, y_train: pd.Series) -> xgb.XGBRegressor:
-        """Train XGBoost model with hyperparameter tuning."""
-        logger.info("Training XGBoost model...")
-        
-        param_grid = {
-            'n_estimators': self.model_config['xgb']['n_estimators'],
-            'learning_rate': self.model_config['xgb']['learning_rate'],
-            'max_depth': self.model_config['xgb']['max_depth'],
-            'subsample': self.model_config['xgb']['subsample'],
-            'colsample_bytree': self.model_config['xgb']['colsample_bytree']
-        }
-        
-        xgb_model = xgb.XGBRegressor(random_state=self.model_config['random_state'])
-        grid_search = GridSearchCV(
-            xgb_model, param_grid, 
-            cv=self.model_config['cv_folds'],
-            scoring='neg_mean_squared_error',
-            n_jobs=-1
-        )
-        
-        grid_search.fit(X_train, y_train)
-        
-        self.models['xgboost'] = grid_search.best_estimator_
-        self.best_params['xgboost'] = grid_search.best_params_
-        
-        logger.info(f"Best XGBoost params: {grid_search.best_params_}")
-        
-        return grid_search.best_estimator_
-    
-    def train_ann(self, X_train: pd.DataFrame, y_train: pd.Series) -> keras.Model:
-        """Train ANN model with Optuna hyperparameter optimization."""
-        logger.info("Training ANN model with Optuna...")
-        
-        def objective(trial):
-            # Define hyperparameters to optimize
-            n_layers = trial.suggest_int('n_layers', 2, 4)
-            n_neurons = trial.suggest_categorical('n_neurons', [32, 64, 128])
-            activation = trial.suggest_categorical('activation', ['relu', 'tanh'])
-            dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.3)
-            learning_rate = trial.suggest_float('learning_rate', 0.001, 0.1, log=True)
-            batch_size = trial.suggest_categorical('batch_size', [16, 32, 64])
-            
-            # Build model
-            model = keras.Sequential()
-            model.add(layers.Dense(n_neurons, activation=activation, input_shape=(X_train.shape[1],)))
-            model.add(layers.Dropout(dropout_rate))
-            
-            for _ in range(n_layers - 1):
-                model.add(layers.Dense(n_neurons // 2, activation=activation))
-                model.add(layers.Dropout(dropout_rate))
-            
-            model.add(layers.Dense(1, activation='linear'))
-            
-            # Compile model
-            optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-            model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
-            
-            # Train with early stopping
-            early_stopping = keras.callbacks.EarlyStopping(
-                monitor='val_loss', patience=10, restore_best_weights=True
-            )
-            
-            history = model.fit(
-                X_train, y_train,
-                validation_split=0.2,
-                epochs=100,
-                batch_size=batch_size,
-                callbacks=[early_stopping],
-                verbose=0
-            )
-            
-            # Return validation loss for optimization
-            return min(history.history['val_loss'])
-        
-        # Optimize hyperparameters
-        study = optuna.create_study(direction='minimize')
-        study.optimize(objective, n_trials=20)
-        
-        # Train final model with best parameters
-        best_params = study.best_params
-        
-        model = keras.Sequential()
-        model.add(layers.Dense(best_params['n_neurons'], 
-                              activation=best_params['activation'], 
-                              input_shape=(X_train.shape[1],)))
-        model.add(layers.Dropout(best_params['dropout_rate']))
-        
-        for _ in range(best_params['n_layers'] - 1):
-            model.add(layers.Dense(best_params['n_neurons'] // 2, 
-                                  activation=best_params['activation']))
-            model.add(layers.Dropout(best_params['dropout_rate']))
-        
-        model.add(layers.Dense(1, activation='linear'))
-        
-        optimizer = keras.optimizers.Adam(learning_rate=best_params['learning_rate'])
-        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
-        
-        early_stopping = keras.callbacks.EarlyStopping(
-            monitor='val_loss', patience=15, restore_best_weights=True
-        )
-        
-        model.fit(
-            X_train, y_train,
-            validation_split=0.2,
-            epochs=200,
-            batch_size=best_params['batch_size'],
-            callbacks=[early_stopping],
+            n_jobs=-1,
             verbose=1
         )
         
-        self.models['ann'] = model
-        self.best_params['ann'] = best_params
+        grid_search.fit(X_train, y_train)
         
-        logger.info(f"Best ANN params: {best_params}")
+        # Store best parameters
+        self.best_params['knn'] = grid_search.best_params_
+        self.logger.info(f"Best KNN parameters: {grid_search.best_params_}")
+        
+        return grid_search.best_estimator_
+    
+    def train_random_forest(self, X_train: pd.DataFrame, 
+                           y_train: pd.Series) -> RandomForestRegressor:
+        """
+        Train Random Forest with hyperparameter tuning.
+        
+        Args:
+            X_train: Training features
+            y_train: Training target
+            
+        Returns:
+            Trained model
+        """
+        self.logger.info("Training Random Forest with hyperparameter tuning...")
+        
+        rf = RandomForestRegressor(random_state=self.random_state)
+        
+        # Grid search with cross-validation
+        grid_search = GridSearchCV(
+            rf,
+            self.rf_param_grid,
+            cv=5,
+            scoring='neg_mean_squared_error',
+            n_jobs=-1,
+            verbose=1
+        )
+        
+        grid_search.fit(X_train, y_train)
+        
+        # Store best parameters
+        self.best_params['random_forest'] = grid_search.best_params_
+        self.logger.info(f"Best RF parameters: {grid_search.best_params_}")
+        
+        return grid_search.best_estimator_
+    
+    def train_xgboost(self, X_train: pd.DataFrame, 
+                     y_train: pd.Series) -> xgb.XGBRegressor:
+        """
+        Train XGBoost with hyperparameter tuning.
+        
+        Args:
+            X_train: Training features
+            y_train: Training target
+            
+        Returns:
+            Trained model
+        """
+        self.logger.info("Training XGBoost with hyperparameter tuning...")
+        
+        xgb_model = xgb.XGBRegressor(random_state=self.random_state)
+        
+        # Grid search with cross-validation
+        grid_search = GridSearchCV(
+            xgb_model,
+            self.xgb_param_grid,
+            cv=5,
+            scoring='neg_mean_squared_error',
+            n_jobs=-1,
+            verbose=1
+        )
+        
+        grid_search.fit(X_train, y_train)
+        
+        # Store best parameters
+        self.best_params['xgboost'] = grid_search.best_params_
+        self.logger.info(f"Best XGBoost parameters: {grid_search.best_params_}")
+        
+        return grid_search.best_estimator_
+    
+    def create_ann_model(self, trial: optuna.Trial, input_dim: int) -> Sequential:
+        """
+        Create ANN model with Optuna hyperparameter optimization.
+        
+        Args:
+            trial: Optuna trial object
+            input_dim: Number of input features
+            
+        Returns:
+            Keras Sequential model
+        """
+        n_layers = trial.suggest_int('n_layers', *self.ann_param_ranges['n_layers'])
+        
+        model = Sequential()
+        
+        # First layer
+        n_neurons = trial.suggest_int('n_neurons_1', *self.ann_param_ranges['n_neurons'])
+        activation = trial.suggest_categorical('activation', self.ann_param_ranges['activation'])
+        dropout_rate = trial.suggest_float('dropout_rate', *self.ann_param_ranges['dropout_rate'])
+        
+        model.add(Dense(n_neurons, activation=activation, input_dim=input_dim))
+        model.add(Dropout(dropout_rate))
+        
+        # Additional layers
+        for i in range(2, n_layers + 1):
+            n_neurons = trial.suggest_int(f'n_neurons_{i}', *self.ann_param_ranges['n_neurons'])
+            model.add(Dense(n_neurons, activation=activation))
+            model.add(Dropout(dropout_rate))
+        
+        # Output layer
+        model.add(Dense(1, activation='linear'))
+        
+        # Compile model
+        learning_rate = trial.suggest_float('learning_rate', *self.ann_param_ranges['learning_rate'], log=True)
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
         
         return model
     
-    def train_arima(self, y_train: pd.Series, dates: pd.Series) -> ARIMA:
-        """Train ARIMA model with automatic parameter selection."""
-        logger.info("Training ARIMA model...")
+    def ann_objective(self, trial: optuna.Trial, X_train: pd.DataFrame, 
+                     y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series) -> float:
+        """
+        Objective function for ANN hyperparameter optimization.
         
-        # Create time series with proper index
-        ts = pd.Series(y_train.values, index=dates)
+        Args:
+            trial: Optuna trial
+            X_train: Training features
+            y_train: Training target
+            X_val: Validation features
+            y_val: Validation target
+            
+        Returns:
+            Validation loss
+        """
+        model = self.create_ann_model(trial, X_train.shape[1])
+        
+        batch_size = trial.suggest_categorical('batch_size', self.ann_param_ranges['batch_size'])
+        epochs = trial.suggest_categorical('epochs', self.ann_param_ranges['epochs'])
+        
+        # Train model
+        history = model.fit(
+            X_train, y_train,
+            validation_data=(X_val, y_val),
+            batch_size=batch_size,
+            epochs=epochs,
+            verbose=0,
+            callbacks=[
+                keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True)
+            ]
+        )
+        
+        # Return validation loss
+        return min(history.history['val_loss'])
+    
+    def train_ann(self, X_train: pd.DataFrame, y_train: pd.Series) -> Sequential:
+        """
+        Train Artificial Neural Network with Optuna optimization.
+        
+        Args:
+            X_train: Training features
+            y_train: Training target
+            
+        Returns:
+            Trained model
+        """
+        self.logger.info("Training Artificial Neural Network with Optuna optimization...")
+        
+        # Split training data for validation
+        split_idx = int(0.8 * len(X_train))
+        X_train_opt = X_train.iloc[:split_idx]
+        y_train_opt = y_train.iloc[:split_idx]
+        X_val_opt = X_train.iloc[split_idx:]
+        y_val_opt = y_train.iloc[split_idx:]
+        
+        # Create Optuna study
+        study = optuna.create_study(direction='minimize')
+        study.optimize(
+            lambda trial: self.ann_objective(trial, X_train_opt, y_train_opt, X_val_opt, y_val_opt),
+            n_trials=50
+        )
+        
+        # Train final model with best parameters
+        best_params = study.best_params
+        self.best_params['ann'] = best_params
+        self.logger.info(f"Best ANN parameters: {best_params}")
+        
+        # Create and train final model
+        model = self.create_ann_model(study.best_trial, X_train.shape[1])
+        
+        model.fit(
+            X_train, y_train,
+            batch_size=best_params['batch_size'],
+            epochs=best_params['epochs'],
+            verbose=0,
+            callbacks=[
+                keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+            ]
+        )
+        
+        return model
+    
+    def train_arima(self, dates: pd.Series, values: pd.Series) -> ARIMA:
+        """
+        Train ARIMA model with automatic parameter selection.
+        
+        Args:
+            dates: Date series
+            values: Target values series
+            
+        Returns:
+            Trained ARIMA model
+        """
+        self.logger.info("Training ARIMA model...")
+        
+        # Create time series
+        ts = pd.Series(values.values, index=pd.to_datetime(dates))
         
         # Test for stationarity
         adf_result = adfuller(ts.dropna())
-        logger.info(f"ADF Statistic: {adf_result[0]:.6f}")
-        logger.info(f"p-value: {adf_result[1]:.6f}")
+        self.logger.info(f"ADF Statistic: {adf_result[0]:.4f}")
+        self.logger.info(f"p-value: {adf_result[1]:.4f}")
         
         # Determine differencing order
-        d = 0 if adf_result[1] < 0.05 else 1
+        d = 0
+        if adf_result[1] > 0.05:
+            d = 1
+            ts_diff = ts.diff().dropna()
+            adf_result_diff = adfuller(ts_diff)
+            self.logger.info(f"After differencing - ADF p-value: {adf_result_diff[1]:.4f}")
         
         # Grid search for best ARIMA parameters
-        best_aic = np.inf
-        best_params = None
-        best_model = None
+        best_aic = float('inf')
+        best_params = (0, 0, 0)
         
-        p_range = self.model_config['arima']['p_range']
-        q_range = self.model_config['arima']['q_range']
+        p_values = range(0, 4)
+        q_values = range(0, 4)
         
-        for p in p_range:
-            for q in q_range:
+        for p in p_values:
+            for q in q_values:
                 try:
                     model = ARIMA(ts, order=(p, d, q))
                     fitted_model = model.fit()
@@ -284,88 +427,98 @@ class ModelTrainer:
                     if fitted_model.aic < best_aic:
                         best_aic = fitted_model.aic
                         best_params = (p, d, q)
-                        best_model = fitted_model
                         
-                except Exception as e:
+                except:
                     continue
         
-        self.models['arima'] = best_model
+        # Train final model with best parameters
+        self.logger.info(f"Best ARIMA parameters: {best_params} (AIC: {best_aic:.4f})")
+        final_model = ARIMA(ts, order=best_params)
+        fitted_final = final_model.fit()
+        
         self.best_params['arima'] = {
             'order': best_params,
             'aic': best_aic
         }
         
-        logger.info(f"Best ARIMA params: {best_params}, AIC: {best_aic:.2f}")
-        
-        return best_model
+        return fitted_final
     
     def train_all_models(self, X_train: pd.DataFrame, y_train: pd.Series, 
-                        dates: pd.Series = None) -> Dict[str, Any]:
-        """Train all models and return them."""
-        logger.info("Training all models...")
+                        dates_train: pd.Series) -> Dict[str, Any]:
+        """
+        Train all models with their respective hyperparameter optimization.
         
-        models = {}
+        Args:
+            X_train: Training features
+            y_train: Training target
+            dates_train: Training dates for ARIMA
+            
+        Returns:
+            Dictionary of trained models
+        """
+        self.logger.info("Starting training of all models...")
         
-        # Train traditional ML models
-        models['linear_regression'] = self.train_linear_regression(X_train, y_train)
-        models['knn'] = self.train_knn(X_train, y_train)
-        models['random_forest'] = self.train_random_forest(X_train, y_train)
-        models['xgboost'] = self.train_xgboost(X_train, y_train)
+        # Train Multiple Linear Regression
+        self.trained_models['linear_regression'] = self.train_linear_regression(X_train, y_train)
         
-        # Train ANN
-        models['ann'] = self.train_ann(X_train, y_train)
+        # Train K-Nearest Neighbors
+        self.trained_models['knn'] = self.train_knn(X_train, y_train)
         
-        # Train ARIMA (time series specific)
-        if dates is not None:
-            models['arima'] = self.train_arima(y_train, dates)
+        # Train Random Forest
+        self.trained_models['random_forest'] = self.train_random_forest(X_train, y_train)
         
-        return models
+        # Train XGBoost
+        self.trained_models['xgboost'] = self.train_xgboost(X_train, y_train)
+        
+        # Train Artificial Neural Network
+        self.trained_models['ann'] = self.train_ann(X_train, y_train)
+        
+        # Train ARIMA
+        self.trained_models['arima'] = self.train_arima(dates_train, y_train)
+        
+        self.logger.info(f"Successfully trained {len(self.trained_models)} models")
+        
+        return self.trained_models
     
-    def save_models(self, output_dir: str = "models/saved_models"):
-        """Save all trained models."""
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
+    def save_models(self) -> None:
+        """Save all trained models to disk."""
+        self.logger.info("Saving trained models...")
         
-        for name, model in self.models.items():
-            if name == 'ann':
+        for model_name, model in self.trained_models.items():
+            if model_name == 'ann':
                 # Save Keras model
-                model.save(output_path / f'{name}_model.h5')
+                model.save(self.models_dir / f"{model_name}_model.h5")
             else:
-                # Save sklearn/other models
-                joblib.dump(model, output_path / f'{name}_model.pkl')
+                # Save sklearn/statsmodels models
+                joblib.dump(model, self.models_dir / f"{model_name}_model.pkl")
         
         # Save best parameters
-        joblib.dump(self.best_params, output_path / 'best_parameters.pkl')
+        with open(self.models_dir / "best_parameters.json", 'w') as f:
+            json.dump(self.best_params, f, indent=2, default=str)
         
-        logger.info(f"Saved {len(self.models)} models to {output_path}")
+        self.logger.info(f"Models saved to {self.models_dir}")
     
-    def evaluate_model(self, model, X_test: pd.DataFrame, y_test: pd.Series, 
-                      model_name: str) -> Dict[str, float]:
-        """Evaluate a single model."""
-        if model_name == 'linear_regression':
-            # Use selected features for MLR
-            selected_features = self.best_params['linear_regression']['selected_features']
-            y_pred = model.predict(X_test[selected_features])
-        elif model_name == 'ann':
-            y_pred = model.predict(X_test).flatten()
-        elif model_name == 'arima':
-            # ARIMA prediction logic would be different
-            # For now, return placeholder metrics
-            return {
-                'mae': 0.0, 'mse': 0.0, 'rmse': 0.0, 'r2': 0.0
-            }
-        else:
-            y_pred = model.predict(X_test)
+    def load_models(self) -> Dict[str, Any]:
+        """Load saved models from disk."""
+        self.logger.info("Loading trained models...")
         
-        # Calculate metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        mse = mean_squared_error(y_test, y_pred)
-        rmse = np.sqrt(mse)
-        r2 = r2_score(y_test, y_pred)
+        loaded_models = {}
         
-        return {
-            'mae': mae,
-            'mse': mse, 
-            'rmse': rmse,
-            'r2': r2
-        }
+        # Load sklearn/statsmodels models
+        for model_file in self.models_dir.glob("*_model.pkl"):
+            model_name = model_file.stem.replace("_model", "")
+            loaded_models[model_name] = joblib.load(model_file)
+        
+        # Load Keras model if exists
+        ann_model_path = self.models_dir / "ann_model.h5"
+        if ann_model_path.exists():
+            loaded_models['ann'] = keras.models.load_model(ann_model_path)
+        
+        # Load best parameters
+        params_file = self.models_dir / "best_parameters.json"
+        if params_file.exists():
+            with open(params_file, 'r') as f:
+                self.best_params = json.load(f)
+        
+        self.logger.info(f"Loaded {len(loaded_models)} models")
+        return loaded_models
