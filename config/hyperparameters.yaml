@@ -1,0 +1,62 @@
+# Hyperparameter Configuration for All Models
+
+# Artificial Neural Network (ANN)
+ann:
+  architecture:
+    layers: [2, 3, 4]
+    neurons: [32, 64, 128]
+    activation: ["relu", "tanh", "sigmoid"]
+    dropout_rate: [0.1, 0.2, 0.3]
+  
+  training:
+    learning_rate: [0.001, 0.01, 0.1]
+    batch_size: [16, 32, 64]
+    epochs: [50, 100, 200]
+    optimizer: "adam"
+    loss: "mse"
+    
+# Multiple Linear Regression (MLR)
+mlr:
+  # No hyperparameters to tune for basic MLR
+  feature_selection:
+    method: "RFE"
+    n_features_to_select: "auto"
+    
+# K-Nearest Neighbors (KNN)
+knn:
+  n_neighbors: [3, 5, 7, 9, 11, 15]
+  weights: ["uniform", "distance"]
+  metric: ["euclidean", "manhattan", "minkowski"]
+  p: [1, 2]  # Power parameter for minkowski
+  
+# Random Forest (RF)
+random_forest:
+  n_estimators: [100, 200, 300, 500]
+  max_depth: [10, 20, 30, 50, null]
+  min_samples_split: [2, 5, 10]
+  min_samples_leaf: [1, 2, 4]
+  max_features: ["auto", "sqrt", "log2"]
+  
+# XGBoost
+xgboost:
+  n_estimators: [100, 200, 300]
+  learning_rate: [0.01, 0.1, 0.2]
+  max_depth: [3, 6, 9]
+  subsample: [0.8, 0.9, 1.0]
+  colsample_bytree: [0.8, 0.9, 1.0]
+  reg_alpha: [0, 0.1, 1]
+  reg_lambda: [1, 1.5, 2]
+  
+# ARIMA
+arima:
+  p_range: [0, 1, 2, 3, 4, 5]
+  d_range: [0, 1, 2]
+  q_range: [0, 1, 2, 3, 4, 5]
+  seasonal: false
+  
+# Optimization settings
+optimization:
+  method: "grid_search"  # or "optuna" for neural networks
+  n_jobs: -1  # Use all available cores
+  verbose: 2
+  scoring: "neg_mean_squared_error"

@@ -1,0 +1,91 @@
+# Configuration file for Rainfall Forecasting Project
+
+# Data paths
+data:
+  raw_path: "data/raw"
+  processed_path: "data/processed"
+  interim_path: "data/interim"
+  file1: "230731665812CCD_weekly1.csv"
+  file2: "230731450378CCD_weekly2.csv"
+
+# Data preprocessing parameters
+preprocessing:
+  # Range validation
+  valid_ranges:
+    temperature: [20, 35]  # °C
+    humidity: [0, 100]     # %
+    wind: [0, 15]          # km/h
+    precipitation: [0, 400] # mm
+  
+  # Missing value imputation
+  imputation_method: "mean"
+  
+  # Feature engineering
+  lag_features:
+    - precipitation_lag_1
+    - temp_lag_1
+    - humidity_lag_1
+  
+  moving_averages:
+    precipitation_ma: 3
+    temp_ma: 4
+    humidity_ma: 3
+  
+  # Seasonal features
+  monsoon_months: [10, 11, 12, 4]  # Oct-Dec, Apr
+  dry_months: [6, 7, 8]            # Jun-Aug
+
+# Model parameters
+models:
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
+  
+  # ANN parameters
+  ann:
+    hidden_layers: [64, 32]
+    activation: "relu"
+    dropout_rate: 0.2
+    epochs: 100
+    batch_size: 32
+    learning_rate: 0.001
+  
+  # KNN parameters
+  knn:
+    n_neighbors: [3, 5, 7, 9, 11, 15]
+    weights: ["uniform", "distance"]
+    metric: ["euclidean", "manhattan", "minkowski"]
+  
+  # Random Forest parameters
+  rf:
+    n_estimators: [100, 200, 300]
+    max_depth: [10, 20, 30, null]
+    min_samples_split: [2, 5, 10]
+    min_samples_leaf: [1, 2, 4]
+  
+  # XGBoost parameters
+  xgb:
+    n_estimators: [100, 200, 300]
+    learning_rate: [0.01, 0.1, 0.2]
+    max_depth: [3, 6, 9]
+    subsample: [0.8, 0.9, 1.0]
+    colsample_bytree: [0.8, 0.9, 1.0]
+  
+  # ARIMA parameters
+  arima:
+    p_range: [0, 1, 2, 3]
+    d_range: [0, 1, 2]
+    q_range: [0, 1, 2, 3]
+
+# Output paths
+outputs:
+  models_path: "models"
+  plots_path: "reports/figures"
+  latex_path: "reports/latex"
+  logs_path: "logs"
+
+# Report parameters
+report:
+  title: "Rainfall Forecasting in Selangor Using Machine Learning Techniques"
+  author: "Your Name"
+  date: "\\today"
