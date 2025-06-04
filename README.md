@@ -37,6 +37,12 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Quick System Test
+Before running the pipeline, test if everything is properly set up:
+```bash
+python test_system.py
+```
+
 ### Running the Complete Pipeline
 Execute the main pipeline script:
 ```bash
@@ -54,15 +60,31 @@ This will:
 
 ### Running Individual Components
 ```python
-# Data preprocessing only
-python src/data/data_loader.py
+# Test system setup
+python test_system.py
 
-# Train specific model
-python src/models/ann_model.py
+# Data preprocessing only
+from src.data.data_loader import DataLoader
+loader = DataLoader()
+data = loader.load_and_validate_data()
+
+# Train specific models
+from src.models.model_trainer import ModelTrainer
+trainer = ModelTrainer()
 
 # Generate visualizations
-python src/visualization/visualize.py
+from src.visualization.visualize import RainfallVisualizer
+visualizer = RainfallVisualizer()
 ```
+
+### Expected Output
+After successful execution, you will find:
+- **Trained models**: `models/saved_models/`
+- **Evaluation results**: `results/`
+- **Visualizations**: `reports/figures/`
+- **LaTeX report**: `reports/latex/rainfall_forecasting_report.tex`
+- **PDF report**: `reports/latex/rainfall_forecasting_report.pdf`
+- **Logs**: `logs/`
 
 ## Project Structure
 See `PROJECT_STRUCTURE.md` for detailed directory layout.
