@@ -133,7 +133,7 @@ class DataPreprocessor:
     
     def create_lag_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create lag variables for temporal features.
+        Create lag variables for temporal features (using past values only).
         
         Args:
             df: Input DataFrame
@@ -150,6 +150,7 @@ class DataPreprocessor:
             if column in df_lagged.columns:
                 for lag in self.lag_periods:
                     lag_col_name = f"{column.lower()}_lag_{lag}"
+                    # Use positive shift to get previous values (avoid future leakage)
                     df_lagged[lag_col_name] = df_lagged[column].shift(lag)
                     self.logger.info(f"Created lag feature: {lag_col_name}")
         
@@ -331,84 +332,133 @@ class DataPreprocessor:
         
         return X_train, X_test, y_train, y_test
     
-    def preprocess_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
+    def recursive_feature_elimination(self, X: pd.DataFrame, y: pd.Series, 
+                                     n_features: int = 15) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Perform Recursive Feature Elimination (RFE) to select top features.
+        
+        Args:
+            X: Feature DataFrame
+            y: Target Series
+            n_features: Number of top features to select
+            
+        Returns:
+            Tuple of (DataFrame with selected features, list of selected feature names)
+        """
+        # Initialize RFE with linear regression
+        estimator = LinearRegression()
+        selector = RFE(estimator, n_features_to_select=n_features, step=1)
+        
+        # Fit RFE
+        selector = selector.fit(X, y)
+        
+        # Get selected features
+        selected_features = X.columns[selector.support_].tolist()
+        X_selected = X[selected_features]
+        
+        self.logger.info(f"Selected top {n_features} features: {selected_features}")
+        
+        return X_selected, selected_features
+
+    def preprocess_data(self, df: pd.DataFrame, test_size: float = 0.2) -> Tuple:
         """
         Main preprocessing pipeline that orchestrates all steps.
+        Prevents data leakage by splitting before feature engineering.
         
         Args:
             df: Raw input DataFrame
+            test_size: Proportion of data for testing
             
         Returns:
-            Tuple of (normalized_features, normalized_target, processed_dataframe)
+            Tuple containing:
+                X_train, X_test: Training and testing features
+                y_train, y_test: Training and testing targets
+                df_processed: Full processed dataframe
         """
-        self.logger.info("Starting comprehensive data preprocessing...")
+        self.logger.info("Starting comprehensive data preprocessing with leak-proof pipeline...")
         
-        # Step 1: Handle missing values
+        # Step 1: Initial cleaning
         self.logger.info("Step 1: Handling missing values...")
         df_clean = self.handle_missing_values(df)
         
-        # Step 2: Remove outliers
         self.logger.info("Step 2: Removing outliers...")
         df_no_outliers = self.detect_and_remove_outliers(df_clean)
         
-        # Step 3: Feature engineering
-        self.logger.info("Step 3: Creating engineered features...")
+        # Step 2: Time-based split to prevent leakage
+        self.logger.info("Step 3: Performing time-based data split...")
+        split_idx = int(len(df_no_outliers) * (1 - test_size))
+        train_df = df_no_outliers.iloc[:split_idx].copy()
+        test_df = df_no_outliers.iloc[split_idx:].copy()
         
-        # Create lag features
-        df_lagged = self.create_lag_features(df_no_outliers)
+        # Step 3: Feature engineering (separately on train/test to prevent leakage)
+        self.logger.info("Step 4: Creating engineered features...")
         
-        # Create moving averages
-        df_ma = self.create_moving_averages(df_lagged)
+        # Create features on training data
+        train_df = self.create_lag_features(train_df)
+        train_df = self.create_moving_averages(train_df)
+        train_df = self.create_seasonal_features(train_df)
+        train_df = self.create_interaction_features(train_df)
         
-        # Create seasonal features
-        df_seasonal = self.create_seasonal_features(df_ma)
-        
-        # Create interaction features
-        df_processed = self.create_interaction_features(df_seasonal)
-        
-        # Step 4: Prepare features and target
-        self.logger.info("Step 4: Preparing features and target...")
-        
-        # Define feature columns (exclude Date, target, and Year)
-        feature_columns = [col for col in df_processed.columns 
-                          if col not in ['Date', 'Precipitation_mm', 'Year']]
+        # Create features on testing data (using training parameters)
+        test_df = self.create_lag_features(test_df)
+        test_df = self.create_moving_averages(test_df)
+        test_df = self.create_seasonal_features(test_df)
+        test_df = self.create_interaction_features(test_df)
         
         # Remove rows with NaN values (due to lag features)
-        df_processed = df_processed.dropna().reset_index(drop=True)
+        train_df = train_df.dropna().reset_index(drop=True)
+        test_df = test_df.dropna().reset_index(drop=True)
         
-        # Extract features and target
-        X = df_processed[feature_columns]
-        y = df_processed['Precipitation_mm']
+        # Step 4: Prepare features and target
+        self.logger.info("Step 5: Preparing features and target...")
         
-        self.logger.info(f"Feature matrix shape: {X.shape}")
-        self.logger.info(f"Target vector length: {len(y)}")
-        self.logger.info(f"Features: {list(X.columns)}")
+        # Define feature columns
+        feature_columns = [col for col in train_df.columns 
+                          if col not in ['Date', 'Precipitation_mm', 'Year']]
         
-        # Step 5: Normalize data
-        self.logger.info("Step 5: Normalizing features and target...")
-        X_normalized, y_normalized = self.normalize_features(X, y, fit_scalers=True)
+        # Extract features and targets
+        X_train = train_df[feature_columns]
+        y_train = train_df['Precipitation_mm']
+        X_test = test_df[feature_columns]
+        y_test = test_df['Precipitation_mm']
+        
+        # Step 5: Feature selection (only on training data)
+        self.logger.info("Step 6: Performing feature selection...")
+        X_train_selected, selected_features = self.recursive_feature_elimination(X_train, y_train)
+        X_test_selected = X_test[selected_features]
+        
+        # Step 6: Normalize data
+        self.logger.info("Step 7: Normalizing features and target...")
+        X_train_norm, y_train_norm = self.normalize_features(X_train_selected, y_train, fit_scalers=True)
+        X_test_norm, y_test_norm = self.normalize_features(X_test_selected, y_test, fit_scalers=False)
+        
+        # Combine processed data for saving
+        df_processed = pd.concat([train_df, test_df], axis=0)
         
         # Save processed data
-        self.save_processed_data(df_processed, X_normalized, y_normalized)
+        self.save_processed_data(df_processed, X_train_norm, y_train_norm, X_test_norm, y_test_norm)
         
         self.logger.info("Data preprocessing completed successfully!")
         
-        return X_normalized, y_normalized, df_processed
+        return X_train_norm, X_test_norm, y_train_norm, y_test_norm, df_processed
     
     def save_processed_data(self, df_processed: pd.DataFrame, 
-                           X_normalized: pd.DataFrame, y_normalized: pd.Series) -> None:
+                           X_train: pd.DataFrame, y_train: pd.Series,
+                           X_test: pd.DataFrame, y_test: pd.Series) -> None:
         """Save processed data to files."""
         # Save full processed data
         df_processed.to_csv(self.output_dir / "processed_data.csv", index=False)
         
-        # Save normalized features and target
-        X_normalized.to_csv(self.output_dir / "X_normalized.csv", index=False)
-        y_normalized.to_csv(self.output_dir / "y_normalized.csv", index=False)
+        # Save normalized features and targets
+        X_train.to_csv(self.output_dir / "X_train.csv", index=False)
+        y_train.to_csv(self.output_dir / "y_train.csv", index=False)
+        X_test.to_csv(self.output_dir / "X_test.csv", index=False)
+        y_test.to_csv(self.output_dir / "y_test.csv", index=False)
         
         # Save feature info
         import json
         feature_info = {
-            'feature_columns': list(X_normalized.columns),
+            'feature_columns': list(X_train.columns),
             'target_column': 'Precipitation_mm',
             'preprocessing_params': {
                 'lag_periods': self.lag_periods,
