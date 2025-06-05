@@ -1,0 +1,58 @@
+{
+  "linear_regression": {
+    "selected_features": [
+      "Temp_avg",
+      "Relative_Humidity",
+      "Wind_kmh",
+      "Year",
+      "precipitation_lag_1",
+      "temp_lag_1",
+      "humidity_lag_1",
+      "precipitation_ma_3",
+      "temp_ma_4",
+      "humidity_ma_3"
+    ]
+  },
+  "knn": {
+    "metric": "euclidean",
+    "n_neighbors": 3,
+    "p": 1,
+    "weights": "uniform"
+  },
+  "random_forest": {
+    "max_depth": 50,
+    "max_features": "sqrt",
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "n_estimators": 200
+  },
+  "xgboost": {
+    "colsample_bytree": 0.9,
+    "learning_rate": 0.1,
+    "max_depth": 3,
+    "n_estimators": 100,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1,
+    "subsample": 0.8
+  },
+  "ann": {
+    "n_layers": 4,
+    "n_neurons_1": 102,
+    "activation": "relu",
+    "dropout_rate": 0.1709785394732033,
+    "n_neurons_2": 110,
+    "n_neurons_3": 89,
+    "n_neurons_4": 105,
+    "learning_rate": 0.0028851283579992876,
+    "batch_size": 16,
+    "epochs": 100
+  },
+  "arima": {
+    "order": [
+      0,
+      0,
+      1
+    ],
+    "aic": 1735.0968795900412
+  }
+}

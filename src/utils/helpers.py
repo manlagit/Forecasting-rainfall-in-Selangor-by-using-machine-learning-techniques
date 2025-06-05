@@ -7,9 +7,9 @@ import pandas as pd
 import numpy as np
 import joblib
 import logging
-from typing import Dict, Any, List, Tuple
-from pathlib import Path
 import yaml
+from typing import Dict, Any, List
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,8 @@ def save_results_to_csv(results_dict: Dict[str, Any], filename: str) -> None:
         logger.error(f"Failed to save results: {e}")
 
 
-def calculate_percentage_improvement(baseline_rmse: float, model_rmse: float) -> float:
+def calculate_percentage_improvement(
+        baseline_rmse: float, model_rmse: float) -> float:
     """
     Calculate percentage improvement over baseline.
     
@@ -65,8 +66,9 @@ def calculate_percentage_improvement(baseline_rmse: float, model_rmse: float) ->
     return ((baseline_rmse - model_rmse) / baseline_rmse) * 100
 
 
-def create_feature_importance_dict(feature_names: List[str], 
-                                 importance_values: np.ndarray) -> Dict[str, float]:
+def create_feature_importance_dict(
+        feature_names: List[str], 
+        importance_values: np.ndarray) -> Dict[str, float]:
     """
     Create feature importance dictionary.
     
@@ -95,7 +97,8 @@ def ensure_directory_exists(directory_path: str) -> Path:
     return path
 
 
-def validate_data_schema(df: pd.DataFrame, required_columns: List[str]) -> bool:
+def validate_data_schema(
+        df: pd.DataFrame, required_columns: List[str]) -> bool:
     """
     Validate that DataFrame contains required columns.
     
@@ -113,7 +116,9 @@ def validate_data_schema(df: pd.DataFrame, required_columns: List[str]) -> bool:
     return True
 
 
-def get_model_summary_stats(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+def get_model_summary_stats(
+        y_true: np.ndarray, 
+        y_pred: np.ndarray) -> Dict[str, float]:
     """
     Calculate comprehensive model statistics.
     
@@ -162,7 +167,8 @@ def format_number(value: float, decimal_places: int = 4) -> str:
     return f"{value:.{decimal_places}f}"
 
 
-def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
+def load_config(
+        config_path: str = "config/config.yaml") -> Dict[str, Any]:
     """
     Load configuration from YAML file.
     
@@ -177,4 +183,22 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
             return yaml.safe_load(f)
     except Exception as e:
         logger.error(f"Failed to load config from {config_path}: {e}")
+        return {}
+
+
+def load_yaml(file_path: str) -> Dict[str, Any]:
+    """
+    Load data from a YAML file.
+    
+    Args:
+        file_path: Path to YAML file
+        
+    Returns:
+        Dictionary with the loaded data
+    """
+    try:
+        with open(file_path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Failed to load YAML from {file_path}: {e}")
         return {}

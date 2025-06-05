@@ -3,24 +3,25 @@ Main pipeline script for rainfall forecasting project.
 Orchestrates the complete workflow from data loading to report generation.
 """
 
-import logging
 import sys
+import logging
 import traceback
 from pathlib import Path
-import pandas as pd
-import numpy as np
 from datetime import datetime
+import pandas as pd
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent / 'src'))
 
 # Import project modules
-from src.data.data_loader import DataLoader
-from src.features.preprocessing import DataPreprocessor
-from src.models.model_trainer import ModelTrainer
-from src.evaluation.evaluate import ModelEvaluator
-from src.visualization.visualize import RainfallVisualizer
-from src.utils.latex_generator import LaTeXReportGenerator
+from src.data.data_loader import DataLoader  # noqa: E402
+from src.features.build_features import FeatureBuilder  # noqa: E402
+from src.features.preprocessing import DataPreprocessor  # noqa: E402
+from src.models.model_trainer import ModelTrainer  # noqa: E402
+from src.evaluation.evaluate import ModelEvaluator  # noqa: E402
+from src.visualization.visualize import RainfallVisualizer  # noqa: E402
+from src.utils.latex_generator import generate_latex_report  # noqa: E402
+
 
 # Configure logging
 def setup_logging():
@@ -32,7 +33,10 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_dir / f"pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
+            logging.FileHandler(
+                log_dir / f"pipeline_{datetime.now().strftime('%Y%m%d')}"
+                          f"_{datetime.now().strftime('%H%M%S')}.log"
+            ),
             logging.StreamHandler()
         ]
     )
@@ -53,24 +57,62 @@ def main():
         df_raw = data_loader.load_and_validate_data()
         logger.info(f"Loaded dataset with {len(df_raw)} records")
         
-        # Step 2: Data Preprocessing
-        logger.info("Step 2: Preprocessing data...")
+        # Step 2: Data Preprocessing (Cleaning)
+        logger.info("Step 2: Preprocessing data (cleaning)...")
         preprocessor = DataPreprocessor()
-        X_normalized, y_normalized, df_processed = preprocessor.preprocess_data(df_raw)
-        logger.info(f"Processed data: {X_normalized.shape[1]} features, {len(X_normalized)} samples")
+        X, y = preprocessor.preprocess(df_raw)
+        logger.info(
+            f"Preprocessed data: {X.shape[1]} features, {len(X)} samples"
+        )
         
-        # Step 3: Model Training
-        logger.info("Step 3: Training models...")
+        # Step 3: Feature Engineering
+        logger.info("Step 3: Building features...")
+        feature_builder = FeatureBuilder()
+        # Combine features and target for feature engineering
+        df_features = pd.concat([X, y], axis=1)
+        df_features = feature_builder.build_features(df_features)
+        
+        # Separate features and target again
+        X = df_features.drop(columns=['Precipitation_mm'])
+        y = df_features['Precipitation_mm']
+        
+        # Remove non-numeric columns for model training
+        X = X.select_dtypes(include=['number'])
+        logger.info(f"Built {X.shape[1]} numeric features after engineering")
+        
+        # Step 4: Time-aware data split
+        logger.info("Step 4: Splitting data...")
+        test_size = 0.2
+        split_index = int(len(X) * (1 - test_size))
+        X_train = X.iloc[:split_index]
+        X_test = X.iloc[split_index:]
+        y_train = y.iloc[:split_index]
+        y_test = y.iloc[split_index:]
+        logger.info(f"Split data: Train={len(X_train)}, Test={len(X_test)}")
+        
+        # Step 5: Scaling
+        logger.info("Step 5: Scaling data...")
+        preprocessor.fit_scalers(X_train, y_train)
+        X_train_scaled, y_train_scaled = preprocessor.transform(
+            X_train, y_train
+        )
+        X_test_scaled, y_test_scaled = preprocessor.transform(
+            X_test, y_test
+        )
+        preprocessor.save_scalers("models/scalers")
+        
+        # Step 6: Model Training
+        logger.info("Step 6: Training models...")
         trainer = ModelTrainer()
-        X_train, X_test, y_train, y_test = trainer.split_data(X_normalized, y_normalized)
-        
-        # Extract dates for ARIMA
-        dates_train = df_processed['Date'].iloc[:len(X_train)]
-        
-        # Train all models
-        models = trainer.train_all_models(X_train, y_train, dates_train)
+        dates_train = df_raw.iloc[:split_index]['Date']  # Use original dates
+        models = trainer.train_all_models(
+            X_train_scaled, y_train_scaled, dates_train
+        )
         trainer.save_models()
         logger.info(f"Trained and saved {len(models)} models")
+        
+        # Prepare processed dataframe for visualization
+        df_processed = df_features.copy()
         
         # Step 4: Model Evaluation
         logger.info("Step 4: Evaluating models...")
@@ -79,7 +121,9 @@ def main():
         # Evaluate each model
         for model_name, model in models.items():
             if model_name == 'linear_regression':
-                selected_features = trainer.best_params['linear_regression']['selected_features']
+                selected_features = trainer.best_params[
+                    'linear_regression'
+                ]['selected_features']
                 y_pred = model.predict(X_test[selected_features])
             elif model_name == 'ann':
                 y_pred = model.predict(X_test).flatten()
@@ -89,8 +133,17 @@ def main():
             else:
                 y_pred = model.predict(X_test)
             
-            # Evaluate model
-            evaluator.evaluate_model(y_test.values, y_pred, model_name)
+            # Evaluate model (use inverse transformed values)
+            target_scaler = preprocessor.target_scaler
+            y_pred_inverse = target_scaler.inverse_transform(
+                y_pred.reshape(-1, 1)
+            ).flatten()
+            y_test_inverse = target_scaler.inverse_transform(
+                y_test.values.reshape(-1, 1)
+            ).flatten()
+            evaluator.evaluate_model(
+                y_test_inverse, y_pred_inverse, model_name
+            )
         
         # Generate comparison and save results
         comparison_df = evaluator.compare_models()
@@ -113,21 +166,25 @@ def main():
         
         # Step 6: Generate LaTeX Report
         logger.info("Step 6: Generating LaTeX report...")
-        report_generator = LaTeXReportGenerator()
         
-        # Generate report
-        latex_file = report_generator.generate_complete_report(
+        # Get predictions for the best model
+        best_model_name = comparison_df.index[0]
+        best_model = models[best_model_name]
+        y_pred = best_model.predict(X_test)
+        
+        # Generate the LaTeX report file
+        report_path = generate_latex_report(
             comparison_df, 
-            plot_paths
+            y_test, 
+            y_pred, 
+            best_model_name,
+            output_dir="reports/latex"
         )
+        logger.info(f"Generated LaTeX report at: {report_path}")
         
-        # Compile to PDF
-        pdf_file = report_generator.compile_pdf(latex_file)
-        
-        if pdf_file:
-            logger.info(f"Successfully generated PDF report: {pdf_file}")
-        else:
-            logger.warning("PDF compilation failed, but LaTeX file is available")
+        # Note: PDF compilation would need to be done manually
+        # or through a separate process
+        logger.info("Please compile the LaTeX report to PDF manually")
         
         # Pipeline completion
         logger.info("="*60)
@@ -139,13 +196,14 @@ def main():
         print("PIPELINE EXECUTION SUMMARY")
         print(f"{'='*60}")
         print(f"✓ Data loaded: {len(df_raw)} records")
-        print(f"✓ Features engineered: {X_normalized.shape[1]} features")
+        print(f"✓ Features engineered: {X.shape[1]} features")
         print(f"✓ Models trained: {len(models)}")
-        print(f"✓ Best model: {comparison_df.index[0]} (RMSE: {comparison_df.iloc[0]['RMSE']:.4f})")
+        print(
+            f"✓ Best model: {comparison_df.index[0]} "
+            f"(RMSE: {comparison_df.iloc[0]['RMSE']:.4f})"
+        )
         print(f"✓ Plots generated: {len(plot_paths)}")
-        print(f"✓ Report generated: {latex_file}")
-        if pdf_file:
-            print(f"✓ PDF compiled: {pdf_file}")
+        print(f"✓ Report generated: {report_path}")
         print(f"{'='*60}")
         
         return True

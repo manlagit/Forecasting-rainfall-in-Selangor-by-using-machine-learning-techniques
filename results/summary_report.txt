@@ -1,0 +1,61 @@
+
+================================================================================
+RAINFALL FORECASTING MODEL EVALUATION SUMMARY
+================================================================================
+
+MODEL PERFORMANCE RANKING:
+--------------------------------------------------
+1. LINEAR_REGRESSION
+   RMSE: 666.0846
+   MAE: 472.3295
+   R²: 0.4900
+   MAPE: 305.70%
+   Mean Residual: -26.9470
+
+2. XGBOOST
+   RMSE: 1160.1290
+   MAE: 732.2811
+   R²: -0.5470
+   MAPE: 101.53%
+   Mean Residual: 695.1595
+
+3. RANDOM_FOREST
+   RMSE: 1162.6719
+   MAE: 733.1957
+   R²: -0.5538
+   MAPE: 96.72%
+   Mean Residual: 701.0482
+
+4. KNN
+   RMSE: 1247.3470
+   MAE: 847.7821
+   R²: -0.7883
+   MAPE: 98.29%
+   Mean Residual: 846.7400
+
+5. ANN
+   RMSE: 3302.5876
+   MAE: 3200.2904
+   R²: -11.5366
+   MAPE: 1489.76%
+   Mean Residual: 3200.2904
+
+🏆 BEST PERFORMING MODEL: LINEAR_REGRESSION
+   Root Mean Square Error: 666.0846
+   Coefficient of Determination: 0.4900
+   Mean Absolute Percentage Error: 305.70%
+
+STATISTICAL SIGNIFICANCE TESTS:
+--------------------------------------------------
+linear_regression_vs_knn: p-value = 0.0000 (✓ SIGNIFICANT)
+linear_regression_vs_random_forest: p-value = 0.0000 (✓ SIGNIFICANT)
+linear_regression_vs_xgboost: p-value = 0.0000 (✓ SIGNIFICANT)
+linear_regression_vs_ann: p-value = 0.0000 (✓ SIGNIFICANT)
+knn_vs_random_forest: p-value = 0.0000 (✓ SIGNIFICANT)
+knn_vs_xgboost: p-value = 0.0000 (✓ SIGNIFICANT)
+knn_vs_ann: p-value = 0.0000 (✓ SIGNIFICANT)
+random_forest_vs_xgboost: p-value = 0.4783 (✗ NOT SIGNIFICANT)
+random_forest_vs_ann: p-value = 0.0000 (✓ SIGNIFICANT)
+xgboost_vs_ann: p-value = 0.0000 (✓ SIGNIFICANT)
+
+================================================================================

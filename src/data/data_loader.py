@@ -73,6 +73,11 @@ class DataLoader:
             df = pd.read_csv(file_path)
             self.logger.info(f"Loaded {len(df)} records from {file_path.name}")
             
+            # Derive Year from Date if missing
+            if 'Year' not in df.columns and 'Date' in df.columns:
+                df['Year'] = pd.to_datetime(df['Date']).dt.year
+                self.logger.info(f"Derived Year column from Date for {file_path.name}")
+            
             # Validate schema
             self._validate_schema(df, file_path.name)
             

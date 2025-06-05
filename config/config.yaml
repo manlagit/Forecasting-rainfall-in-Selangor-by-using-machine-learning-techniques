@@ -19,21 +19,22 @@ preprocessing:
   
   # Missing value imputation
   imputation_method: "mean"
-  
-  # Feature engineering
+
+# Feature engineering parameters
+feature_engineering:
   lag_features:
     - precipitation_lag_1
     - temp_lag_1
     - humidity_lag_1
   
   moving_averages:
-    precipitation_ma: 3
-    temp_ma: 4
-    humidity_ma: 3
+    precipitation: 3
+    temp: 4
+    humidity: 3
   
-  # Seasonal features
-  monsoon_months: [10, 11, 12, 4]  # Oct-Dec, Apr
-  dry_months: [6, 7, 8]            # Jun-Aug
+  seasonal_features:
+    monsoon_months: [10, 11, 12, 4]  # Oct-Dec, Apr
+    dry_months: [6, 7, 8]            # Jun-Aug
 
 # Model parameters
 models:

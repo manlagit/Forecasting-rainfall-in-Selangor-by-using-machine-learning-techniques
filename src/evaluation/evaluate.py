@@ -6,13 +6,12 @@ Standardized evaluation and comparison of all models.
 import pandas as pd
 import numpy as np
 import logging
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from pathlib import Path
 import json
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from scipy import stats
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 class ModelEvaluator:
     """
@@ -35,8 +34,12 @@ class ModelEvaluator:
         self.evaluation_results = {}
         self.predictions = {}
     
-    def evaluate_model(self, y_true: np.ndarray, y_pred: np.ndarray, 
-                      model_name: str) -> Dict[str, float]:
+    def evaluate_model(
+        self, 
+        y_true: np.ndarray, 
+        y_pred: np.ndarray, 
+        model_name: str
+    ) -> Dict[str, float]:
         """
         Evaluate a single model using standard metrics.
         
@@ -59,7 +62,8 @@ class ModelEvaluator:
         r2 = r2_score(y_true, y_pred)
         
         # Additional metrics
-        mape = np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100
+        abs_errors = np.abs((y_true - y_pred) / (y_true + 1e-8))
+        mape = np.mean(abs_errors) * 100
         residuals = y_true - y_pred
         
         metrics = {
@@ -80,7 +84,9 @@ class ModelEvaluator:
             'residuals': residuals
         }
         
-        self.logger.info(f"Evaluated {model_name} - RMSE: {rmse:.4f}, R²: {r2:.4f}")
+        # Log evaluation results concisely
+        self.logger.info(f"{model_name}: RMSE={rmse:.4f}")
+        self.logger.info(f"{model_name}: R²={r2:.4f}")
         
         return metrics
     
@@ -104,12 +110,18 @@ class ModelEvaluator:
         comparison_df['Rank'] = range(1, len(comparison_df) + 1)
         
         # Reorder columns
-        columns_order = ['Rank', 'RMSE', 'MAE', 'R2', 'MSE', 'MAPE', 
-                        'Mean_Residual', 'Std_Residual']
+        columns_order = [
+            'Rank', 'RMSE', 'MAE', 'R2', 'MSE', 'MAPE', 
+            'Mean_Residual', 'Std_Residual'
+        ]
         comparison_df = comparison_df[columns_order]
         
         self.logger.info("Model comparison completed")
-        self.logger.info(f"Best model: {comparison_df.index[0]} (RMSE: {comparison_df.iloc[0]['RMSE']:.4f})")
+        # Log best model concisely
+        best_model_name = comparison_df.index[0]
+        best_rmse = comparison_df.iloc[0]['RMSE']
+        self.logger.info(f"Best model: {best_model_name}")
+        self.logger.info(f"Best RMSE: {best_rmse:.4f}")
         
         return comparison_df
     
@@ -121,7 +133,9 @@ class ModelEvaluator:
             Dictionary with statistical test results
         """
         if len(self.predictions) < 2:
-            self.logger.warning("Need at least 2 models for statistical testing")
+            self.logger.warning(
+                "Need at least 2 models for statistical testing"
+            )
             return {}
         
         statistical_results = {}
@@ -146,7 +160,8 @@ class ModelEvaluator:
                     'significant': p_value < 0.05
                 }
         
-        self.logger.info(f"Performed {len(statistical_results)} paired t-tests")
+        num_tests = len(statistical_results)
+        self.logger.info(f"Performed {num_tests} paired t-tests")
         return statistical_results
     
     def generate_summary_report(self) -> str:
@@ -173,22 +188,42 @@ MODEL PERFORMANCE RANKING:
         
         for idx, (model_name, row) in enumerate(comparison_df.iterrows(), 1):
             report += f"{idx}. {model_name.upper()}\n"
-            report += f"   RMSE: {row['RMSE']:.4f} | MAE: {row['MAE']:.4f} | R²: {row['R2']:.4f}\n"
-            report += f"   MAPE: {row['MAPE']:.2f}% | Mean Residual: {row['Mean_Residual']:.4f}\n\n"
+            report += (
+                f"   RMSE: {row['RMSE']:.4f}\n"
+                f"   MAE: {row['MAE']:.4f}\n"
+                f"   R²: {row['R2']:.4f}\n"
+            )
+            report += f"   MAPE: {row['MAPE']:.2f}%\n"
+            report += f"   Mean Residual: {row['Mean_Residual']:.4f}\n\n"
         
         # Best model details
         best_model = comparison_df.index[0]
         report += f"🏆 BEST PERFORMING MODEL: {best_model.upper()}\n"
-        report += f"   Root Mean Square Error: {comparison_df.iloc[0]['RMSE']:.4f}\n"
-        report += f"   Coefficient of Determination: {comparison_df.iloc[0]['R2']:.4f}\n"
-        report += f"   Mean Absolute Percentage Error: {comparison_df.iloc[0]['MAPE']:.2f}%\n\n"
+        report += (
+            f"   Root Mean Square Error: "
+            f"{comparison_df.iloc[0]['RMSE']:.4f}\n"
+        )
+        report += (
+            f"   Coefficient of "
+            f"Determination: {comparison_df.iloc[0]['R2']:.4f}\n"
+        )
+        report += (
+            f"   Mean Absolute "
+            f"Percentage Error: {comparison_df.iloc[0]['MAPE']:.2f}%\n\n"
+        )
         
         # Statistical significance
         if statistical_tests:
             report += f"STATISTICAL SIGNIFICANCE TESTS:\n{'-'*50}\n"
             for test_name, results in statistical_tests.items():
-                significance = "✓ SIGNIFICANT" if results['significant'] else "✗ NOT SIGNIFICANT"
-                report += f"{test_name}: p-value = {results['p_value']:.4f} ({significance})\n"
+                significance = (
+                    "✓ SIGNIFICANT" if results['significant'] 
+                    else "✗ NOT SIGNIFICANT"
+                )
+                report += (
+                    f"{test_name}: p-value = "
+                    f"{results['p_value']:.4f} ({significance})\n"
+                )
         
         report += f"\n{'='*80}"
         
@@ -211,22 +246,48 @@ MODEL PERFORMANCE RANKING:
                 'y_pred': pred_data['y_pred'],
                 'residuals': pred_data['residuals']
             })
-            pred_df.to_csv(self.results_dir / f"{model_name}_predictions.csv", index=False)
+            pred_df.to_csv(
+                self.results_dir / f"{model_name}_predictions.csv", 
+                index=False
+            )
         
         # Save statistical tests
         statistical_tests = self.perform_statistical_tests()
-        with open(self.results_dir / "statistical_tests.json", 'w') as f:
-            json.dump(statistical_tests, f, indent=2)
+        # Convert numpy types to native Python types for JSON serialization
         
-        # Save summary report
+        def convert_types(obj):
+            if isinstance(obj, np.generic):
+                return obj.item()
+            elif isinstance(obj, dict):
+                return {k: convert_types(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_types(item) for item in obj]
+            else:
+                return obj
+                
+        converted_tests = convert_types(statistical_tests)
+        
+        with open(self.results_dir / "statistical_tests.json", 'w') as f:
+            json.dump(converted_tests, f, indent=2)
+        
+        # Save summary report with UTF-8 encoding
         summary_report = self.generate_summary_report()
-        with open(self.results_dir / "summary_report.txt", 'w') as f:
+        with open(
+            self.results_dir / "summary_report.txt", 
+            'w', 
+            encoding='utf-8'
+        ) as f:
             f.write(summary_report)
         
-        self.logger.info(f"Evaluation results saved to {self.results_dir}")
+        self.logger.info(
+            f"Evaluation results saved to {self.results_dir}"
+        )
     
-    def calculate_feature_importance(self, models: Dict[str, Any], 
-                                   feature_names: List[str]) -> Dict[str, np.ndarray]:
+    def calculate_feature_importance(
+        self, 
+        models: Dict[str, Any], 
+        feature_names: List[str]
+    ) -> Dict[str, np.ndarray]:
         """
         Calculate feature importance for applicable models.
         
@@ -253,8 +314,13 @@ MODEL PERFORMANCE RANKING:
         
         # Save feature importance
         if importance_results:
-            importance_df = pd.DataFrame(importance_results, index=feature_names)
-            importance_df.to_csv(self.results_dir / "feature_importance.csv")
+            importance_df = pd.DataFrame(
+                importance_results, 
+                index=feature_names
+            )
+            importance_df.to_csv(
+                self.results_dir / "feature_importance.csv"
+            )
             self.logger.info("Feature importance results saved")
         
         return importance_results
@@ -281,4 +347,6 @@ MODEL PERFORMANCE RANKING:
             self.logger.info("Evaluation results loaded successfully")
             
         except Exception as e:
-            self.logger.warning(f"Could not load previous results: {e}")
+            self.logger.warning(
+                f"Could not load previous results: {e}"
+            )

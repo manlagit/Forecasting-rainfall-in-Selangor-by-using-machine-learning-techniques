@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{graphicx}
+
+\title{Rainfall Forecasting in Selangor Using Machine Learning Techniques}
+\author{Data Science Team}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+This report presents the analysis and forecasting of rainfall patterns in Selangor, Malaysia using various machine learning techniques. 
+
+\section{Methodology}
+We employed the following models for rainfall prediction:
+\begin{itemize}
+    \item Multiple Linear Regression
+    \item K-Nearest Neighbors (KNN)
+    \item Random Forest
+    \item XGBoost
+    \item Artificial Neural Network (ANN)
+    \item ARIMA
+\end{itemize}
+
+\section{Data}
+The analysis used weekly rainfall data from 2012-2021, including temperature, humidity, and wind speed measurements.
+
+\section{Results}
+Performance metrics for each model will be displayed in the following sections.
+
+\subsection{Model Comparison}
+\begin{table}[h]
+\centering
+\caption{Model Performance Metrics}
+\label{tab:model_performance}
+\begin{tabular}{l c c c c}
+\toprule
+Model & MAE & MSE & RMSE & R\textsuperscript{2} \\
+\midrule
+% RESULTS_TABLE %
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Visualizations}
+\begin{figure}[h]
+\centering
+% ACTUAL_VS_PREDICTED_PLOT %
+\caption{Actual vs Predicted Rainfall}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+% ERROR_DISTRIBUTION_PLOT %
+\caption{Error Distribution}
+\end{figure}
+
+\section{Conclusion}
+The best performing model was % BEST_MODEL % with an R\textsuperscript{2} of % BEST_R2 %.
+\end{document}

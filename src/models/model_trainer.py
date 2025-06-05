@@ -16,6 +16,7 @@ from sklearn.feature_selection import RFE
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.impute import SimpleImputer
 import xgboost as xgb
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
@@ -139,6 +140,23 @@ class ModelTrainer:
         """
         self.logger.info("Training Multiple Linear Regression...")
         
+        # Exclude non-numeric columns
+        X_train = X_train.select_dtypes(include=['number']).copy()
+        
+        # Convert remaining non-numeric features to numeric
+        X_train = X_train.apply(pd.to_numeric, errors='coerce')
+        y_train = pd.to_numeric(y_train, errors='coerce')
+        
+        # Handle missing values
+        if X_train.isnull().sum().sum() > 0:
+            imputer = SimpleImputer(strategy='mean')
+            X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+            self.logger.info("Imputed missing values in features")
+        
+        if y_train.isnull().sum() > 0:
+            y_train = y_train.fillna(y_train.mean())
+            self.logger.info("Imputed missing values in target")
+        
         # Feature selection using RFE
         lr_base = LinearRegression()
         rfe = RFE(estimator=lr_base, n_features_to_select=10)
@@ -172,6 +190,23 @@ class ModelTrainer:
             Trained model
         """
         self.logger.info("Training K-Nearest Neighbors with hyperparameter tuning...")
+        
+        # Exclude non-numeric columns
+        X_train = X_train.select_dtypes(include=['number']).copy()
+        
+        # Convert remaining non-numeric features to numeric
+        X_train = X_train.apply(pd.to_numeric, errors='coerce')
+        y_train = pd.to_numeric(y_train, errors='coerce')
+        
+        # Handle missing values
+        if X_train.isnull().sum().sum() > 0:
+            imputer = SimpleImputer(strategy='mean')
+            X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+            self.logger.info("Imputed missing values in features")
+        
+        if y_train.isnull().sum() > 0:
+            y_train = y_train.fillna(y_train.mean())
+            self.logger.info("Imputed missing values in target")
         
         knn = KNeighborsRegressor()
         
@@ -207,6 +242,23 @@ class ModelTrainer:
         """
         self.logger.info("Training Random Forest with hyperparameter tuning...")
         
+        # Exclude non-numeric columns
+        X_train = X_train.select_dtypes(include=['number']).copy()
+        
+        # Convert remaining non-numeric features to numeric
+        X_train = X_train.apply(pd.to_numeric, errors='coerce')
+        y_train = pd.to_numeric(y_train, errors='coerce')
+        
+        # Handle missing values
+        if X_train.isnull().sum().sum() > 0:
+            imputer = SimpleImputer(strategy='mean')
+            X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+            self.logger.info("Imputed missing values in features")
+        
+        if y_train.isnull().sum() > 0:
+            y_train = y_train.fillna(y_train.mean())
+            self.logger.info("Imputed missing values in target")
+        
         rf = RandomForestRegressor(random_state=self.random_state)
         
         # Grid search with cross-validation
@@ -240,6 +292,23 @@ class ModelTrainer:
             Trained model
         """
         self.logger.info("Training XGBoost with hyperparameter tuning...")
+        
+        # Exclude non-numeric columns
+        X_train = X_train.select_dtypes(include=['number']).copy()
+        
+        # Convert remaining non-numeric features to numeric
+        X_train = X_train.apply(pd.to_numeric, errors='coerce')
+        y_train = pd.to_numeric(y_train, errors='coerce')
+        
+        # Handle missing values
+        if X_train.isnull().sum().sum() > 0:
+            imputer = SimpleImputer(strategy='mean')
+            X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+            self.logger.info("Imputed missing values in features")
+        
+        if y_train.isnull().sum() > 0:
+            y_train = y_train.fillna(y_train.mean())
+            self.logger.info("Imputed missing values in target")
         
         xgb_model = xgb.XGBRegressor(random_state=self.random_state)
         
@@ -348,6 +417,23 @@ class ModelTrainer:
         """
         self.logger.info("Training Artificial Neural Network with Optuna optimization...")
         
+        # Exclude non-numeric columns
+        X_train = X_train.select_dtypes(include=['number']).copy()
+        
+        # Convert remaining non-numeric features to numeric
+        X_train = X_train.apply(pd.to_numeric, errors='coerce')
+        y_train = pd.to_numeric(y_train, errors='coerce')
+        
+        # Handle missing values
+        if X_train.isnull().sum().sum() > 0:
+            imputer = SimpleImputer(strategy='mean')
+            X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+            self.logger.info("Imputed missing values in features")
+        
+        if y_train.isnull().sum() > 0:
+            y_train = y_train.fillna(y_train.mean())
+            self.logger.info("Imputed missing values in target")
+        
         # Split training data for validation
         split_idx = int(0.8 * len(X_train))
         X_train_opt = X_train.iloc[:split_idx]
@@ -394,6 +480,12 @@ class ModelTrainer:
             Trained ARIMA model
         """
         self.logger.info("Training ARIMA model...")
+        
+        # Convert and handle missing values
+        values = pd.to_numeric(values, errors='coerce')
+        if values.isnull().sum() > 0:
+            values = values.fillna(values.mean())
+            self.logger.info("Imputed missing values in target")
         
         # Create time series
         ts = pd.Series(values.values, index=pd.to_datetime(dates))

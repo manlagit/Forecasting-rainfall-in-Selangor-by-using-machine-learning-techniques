@@ -59,14 +59,28 @@ class FeatureBuilder:
             # Create lag features
             for lag_col in self.config['lag_features']:
                 base_col = lag_col.split('_lag_')[0]
+                # Map to actual column names in our dataset
+                column_mapping = {
+                    'precipitation': 'Precipitation_mm',
+                    'temp': 'Temp_avg',
+                    'humidity': 'Relative_Humidity'
+                }
+                actual_base_col = column_mapping.get(base_col, base_col)
                 lag_period = int(lag_col.split('_lag_')[1])
-                df[lag_col] = df[base_col].shift(lag_period)
+                df[lag_col] = df[actual_base_col].shift(lag_period)
                 logging.info(f"Created lag feature: {lag_col}")
 
             # Create moving averages
-            for ma_col, window in self.config['moving_averages'].items():
-                base_col = ma_col.split('_ma_')[0]
-                df[ma_col] = df[base_col].rolling(window=window).mean()
+            for base_col, window in self.config['moving_averages'].items():
+                # Map to actual column names in our dataset
+                column_mapping = {
+                    'precipitation': 'Precipitation_mm',
+                    'temp': 'Temp_avg',
+                    'humidity': 'Relative_Humidity'
+                }
+                actual_base_col = column_mapping.get(base_col, base_col)
+                ma_col = f"{base_col}_ma_{window}"
+                df[ma_col] = df[actual_base_col].rolling(window=window).mean()
                 msg = f"Created moving average: {ma_col} (window={window})"
                 logging.info(msg)
 

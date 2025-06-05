@@ -3,15 +3,16 @@ Visualization & Automation Module
 Automated plot generation with LaTeX integration.
 """
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import tikzplotlib
 import logging
-from pathlib import Path
-from typing import Dict, List, Tuple, Any
 import warnings
+from pathlib import Path
+from typing import Dict, List, Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
 warnings.filterwarnings('ignore')
 
 class RainfallVisualizer:
@@ -46,9 +47,12 @@ class RainfallVisualizer:
             'figure.titlesize': 16
         })
     
-    def plot_time_series_comparison(self, df: pd.DataFrame, 
-                                   predictions: Dict[str, Any],
-                                   model_name: str = 'best_model') -> str:
+    def plot_time_series_comparison(
+        self, 
+        df: pd.DataFrame, 
+        predictions: Dict[str, Any],
+        model_name: str = 'best_model'
+    ) -> str:
         """
         Create time series plot comparing actual vs predicted rainfall.
         
@@ -70,10 +74,14 @@ class RainfallVisualizer:
             dates = df['Date'].tail(len(pred_data['y_true']))
             
             # Plot actual vs predicted
-            ax.plot(dates, pred_data['y_true'], 
-                   label='Actual Rainfall', linewidth=2, alpha=0.8)
-            ax.plot(dates, pred_data['y_pred'], 
-                   label='Predicted Rainfall', linewidth=2, alpha=0.8)
+            ax.plot(
+                dates, pred_data['y_true'], 
+                label='Actual Rainfall', linewidth=2, alpha=0.8
+            )
+            ax.plot(
+                dates, pred_data['y_pred'], 
+                label='Predicted Rainfall', linewidth=2, alpha=0.8
+            )
             
             # Add confidence bands
             residuals = pred_data['residuals']
@@ -81,12 +89,20 @@ class RainfallVisualizer:
             upper_bound = pred_data['y_pred'] + 1.96 * std_residual
             lower_bound = pred_data['y_pred'] - 1.96 * std_residual
             
-            ax.fill_between(dates, lower_bound, upper_bound, 
-                           alpha=0.2, label='95% Confidence Interval')
+            ax.fill_between(
+                dates, lower_bound, upper_bound, 
+                alpha=0.2, label='95% Confidence Interval'
+            )
             
             # Formatting
-            ax.set_title(f'Rainfall Forecasting: Actual vs Predicted ({model_name.title()})', 
-                        fontsize=16, fontweight='bold')
+            ax.set_title(
+                (
+                    f'Rainfall Forecasting: Actual vs Predicted '
+                    f'({model_name.title()})'
+                ),
+                fontsize=16, 
+                fontweight='bold'
+            )
             ax.set_xlabel('Date', fontsize=12)
             ax.set_ylabel('Precipitation (mm)', fontsize=12)
             ax.legend(loc='upper right')
@@ -96,13 +112,16 @@ class RainfallVisualizer:
             plt.xticks(rotation=45)
             plt.tight_layout()
             
+            # Remove legend to avoid tikzplotlib issue
+            ax.get_legend().remove()
+            
             # Save plot
             plot_path = self.figures_dir / f"time_series_{model_name}.png"
             plt.savefig(plot_path, dpi=300, bbox_inches='tight')
             
-            # Convert to LaTeX
-            latex_path = self.figures_dir / f"time_series_{model_name}.tex"
-            tikzplotlib.save(latex_path)
+            # Convert to LaTeX (commented out due to tikzplotlib error)
+            # latex_path = self.figures_dir / f"time_series_{model_name}.tex"
+            # tikzplotlib.save(latex_path)
             
             plt.close()
             
@@ -113,7 +132,10 @@ class RainfallVisualizer:
             self.logger.warning(f"Model {model_name} not found in predictions")
             return ""
     
-    def plot_scatter_actual_vs_predicted(self, predictions: Dict[str, Any]) -> str:
+    def plot_scatter_actual_vs_predicted(
+        self, 
+        predictions: Dict[str, Any]
+    ) -> str:
         """
         Create scatter plots of predicted vs actual values for all models.
         
@@ -172,20 +194,28 @@ class RainfallVisualizer:
                     fontsize=16, fontweight='bold')
         plt.tight_layout()
         
+        # Remove legends to avoid tikzplotlib issue
+        for ax in axes.flat:
+            if ax.get_legend() is not None:
+                ax.get_legend().remove()
+        
         # Save plot
         plot_path = self.figures_dir / "scatter_actual_vs_predicted.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Convert to LaTeX
-        latex_path = self.figures_dir / "scatter_actual_vs_predicted.tex"
-        tikzplotlib.save(latex_path)
+        # Convert to LaTeX (commented out due to tikzplotlib error)
+        # latex_path = self.figures_dir / "scatter_actual_vs_predicted.tex"
+        # tikzplotlib.save(latex_path)
         
         plt.close()
         
         self.logger.info(f"Scatter plot saved: {plot_path}")
         return str(plot_path)
     
-    def plot_model_performance_comparison(self, comparison_df: pd.DataFrame) -> str:
+    def plot_model_performance_comparison(
+        self, 
+        comparison_df: pd.DataFrame
+    ) -> str:
         """
         Create bar chart comparing model performance.
         
@@ -239,7 +269,10 @@ class RainfallVisualizer:
         # MAPE comparison
         bars4 = ax4.bar(models, comparison_df['MAPE'],
                        color=sns.color_palette("husl", len(models)))
-        ax4.set_title('Mean Absolute Percentage Error (MAPE)', fontweight='bold')
+        ax4.set_title(
+            'Mean Absolute Percentage Error (MAPE)', 
+            fontweight='bold'
+        )
         ax4.set_ylabel('MAPE (%)')
         ax4.tick_params(axis='x', rotation=45)
         
@@ -255,16 +288,19 @@ class RainfallVisualizer:
         plot_path = self.figures_dir / "model_performance_comparison.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Convert to LaTeX
-        latex_path = self.figures_dir / "model_performance_comparison.tex"
-        tikzplotlib.save(latex_path)
+        # Convert to LaTeX (commented out due to tikzplotlib error)
+        # latex_path = self.figures_dir / "model_performance_comparison.tex"
+        # tikzplotlib.save(latex_path)
         
         plt.close()
         
         self.logger.info(f"Performance comparison plot saved: {plot_path}")
         return str(plot_path)
     
-    def plot_residual_analysis(self, predictions: Dict[str, Any]) -> str:
+    def plot_residual_analysis(
+        self, 
+        predictions: Dict[str, Any]
+    ) -> str:
         """
         Create residual plots for error analysis.
         
@@ -304,9 +340,13 @@ class RainfallVisualizer:
             # Add statistics
             mean_residual = np.mean(residuals)
             std_residual = np.std(residuals)
-            ax.text(0.05, 0.95, f'Mean: {mean_residual:.4f}\nStd: {std_residual:.4f}',
-                   transform=ax.transAxes, verticalalignment='top',
-                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+            ax.text(
+                0.05, 0.95, 
+                f'Mean: {mean_residual:.4f}\nStd: {std_residual:.4f}',
+                transform=ax.transAxes, 
+                verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+            )
         
         # Hide unused subplots
         for idx in range(n_models, rows * cols):
@@ -324,17 +364,20 @@ class RainfallVisualizer:
         plot_path = self.figures_dir / "residual_analysis.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Convert to LaTeX
-        latex_path = self.figures_dir / "residual_analysis.tex"
-        tikzplotlib.save(latex_path)
+        # Convert to LaTeX (commented out due to tikzplotlib error)
+        # latex_path = self.figures_dir / "residual_analysis.tex"
+        # tikzplotlib.save(latex_path)
         
         plt.close()
         
         self.logger.info(f"Residual analysis plot saved: {plot_path}")
         return str(plot_path)
     
-    def plot_feature_importance(self, importance_data: Dict[str, np.ndarray],
-                               feature_names: List[str]) -> str:
+    def plot_feature_importance(
+        self, 
+        importance_data: Dict[str, np.ndarray],
+        feature_names: List[str]
+    ) -> str:
         """
         Create feature importance plots.
         
@@ -375,8 +418,14 @@ class RainfallVisualizer:
             # Add value labels
             for i, bar in enumerate(bars):
                 width = bar.get_width()
-                ax.text(width, bar.get_y() + bar.get_height()/2.,
-                       f'{width:.3f}', ha='left', va='center', fontsize=9)
+                ax.text(
+                    width, 
+                    bar.get_y() + bar.get_height()/2.,
+                    f'{width:.3f}', 
+                    ha='left', 
+                    va='center', 
+                    fontsize=9
+                )
             
             ax.grid(True, alpha=0.3, axis='x')
         
@@ -387,16 +436,19 @@ class RainfallVisualizer:
         plot_path = self.figures_dir / "feature_importance.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Convert to LaTeX
-        latex_path = self.figures_dir / "feature_importance.tex"
-        tikzplotlib.save(latex_path)
+        # Convert to LaTeX (commented out due to tikzplotlib error)
+        # latex_path = self.figures_dir / "feature_importance.tex"
+        # tikzplotlib.save(latex_path)
         
         plt.close()
         
         self.logger.info(f"Feature importance plot saved: {plot_path}")
         return str(plot_path)
     
-    def plot_correlation_matrix(self, df: pd.DataFrame) -> str:
+    def plot_correlation_matrix(
+        self, 
+        df: pd.DataFrame
+    ) -> str:
         """
         Create correlation matrix heatmap.
         
@@ -414,9 +466,16 @@ class RainfallVisualizer:
         
         # Create heatmap
         mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
-        heatmap = sns.heatmap(correlation_matrix, mask=mask, annot=True, 
-                             cmap='coolwarm', center=0, square=True,
-                             fmt='.2f', cbar_kws={"shrink": .8})
+        sns.heatmap(
+            correlation_matrix, 
+            mask=mask, 
+            annot=True, 
+            cmap='coolwarm', 
+            center=0, 
+            square=True,
+            fmt='.2f', 
+            cbar_kws={"shrink": .8}
+        )
         
         ax.set_title('Feature Correlation Matrix', fontsize=16, fontweight='bold')
         plt.tight_layout()
@@ -425,19 +484,22 @@ class RainfallVisualizer:
         plot_path = self.figures_dir / "correlation_matrix.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         
-        # Convert to LaTeX
-        latex_path = self.figures_dir / "correlation_matrix.tex"
-        tikzplotlib.save(latex_path)
+        # Convert to LaTeX (commented out due to tikzplotlib error)
+        # latex_path = self.figures_dir / "correlation_matrix.tex"
+        # tikzplotlib.save(latex_path)
         
         plt.close()
         
         self.logger.info(f"Correlation matrix plot saved: {plot_path}")
         return str(plot_path)
     
-    def generate_all_plots(self, df_processed: pd.DataFrame, 
-                          comparison_df: pd.DataFrame,
-                          predictions: Dict[str, Any],
-                          importance_data: Dict[str, np.ndarray] = None) -> List[str]:
+    def generate_all_plots(
+        self, 
+        df_processed: pd.DataFrame, 
+        comparison_df: pd.DataFrame,
+        predictions: Dict[str, Any],
+        importance_data: Dict[str, np.ndarray] = None
+    ) -> List[str]:
         """
         Generate all visualization plots.
         
@@ -478,7 +540,9 @@ class RainfallVisualizer:
         
         # Feature importance (if available)
         if importance_data:
-            feature_names = df_processed.columns.drop(['Date', 'Precipitation_mm', 'Year']).tolist()
+            feature_names = df_processed.columns.drop(
+                ['Date', 'Precipitation_mm', 'Year']
+            ).tolist()
             path = self.plot_feature_importance(importance_data, feature_names)
             if path:
                 plot_paths.append(path)
