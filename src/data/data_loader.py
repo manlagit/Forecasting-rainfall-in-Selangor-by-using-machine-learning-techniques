@@ -4,11 +4,11 @@ Handles loading, validation, and integration of rainfall datasets.
 """
 
 import pandas as pd
-import numpy as np
 import logging
 from pathlib import Path
-from typing import Tuple, Dict, List
-import warnings
+from typing import Dict
+import yaml
+
 
 class DataLoader:
     """
@@ -16,15 +16,25 @@ class DataLoader:
     Cost-efficient approach using existing datasets without external API calls.
     """
     
-    def __init__(self, data_dir: str = "data/raw"):
+    def __init__(self, config_path: str = "config/config.yaml"):
         """
-        Initialize DataLoader with data directory path.
+        Initialize DataLoader with configuration.
         
         Args:
-            data_dir: Path to raw data directory
+            config_path: Path to config file
         """
-        self.data_dir = Path(data_dir)
         self.logger = logging.getLogger(__name__)
+        try:
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)
+            
+            self.data_dir = Path(self.config['data']['raw_path'])
+            self.logger.info(
+                f"Initialized DataLoader with config from {config_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load config: {str(e)}")
+            raise
         
         # Expected data schema
         self.expected_columns = [
@@ -39,7 +49,7 @@ class DataLoader:
             'Wind_kmh': (0, 15),            # Wind speed in km/h
             'Precipitation_mm': (0, 400)    # Precipitation in mm
         }
-        
+    
     def load_csv_with_validation(self, file_path: Path) -> pd.DataFrame:
         """
         Load CSV file with comprehensive validation.
@@ -151,8 +161,9 @@ class DataLoader:
             'overlap_dates': sorted(list(date_overlap))
         }
         
-        self.logger.info(f"Duplicate detection: {results['exact_duplicates']} exact, "
-                        f"{results['date_overlaps']} date overlaps")
+        self.logger.info(
+            f"Duplicate detection: {results['exact_duplicates']} exact, "
+            f"{results['date_overlaps']} date overlaps")
         
         return results
     
@@ -193,9 +204,9 @@ class DataLoader:
             Validated and merged DataFrame
         """
         try:
-            # Define file paths
-            file1 = self.data_dir / "230731665812CCD_weekly1.csv"
-            file2 = self.data_dir / "230731450378CCD_weekly2.csv"
+            # Define file paths from config
+            file1 = self.data_dir / self.config['data']['file1']
+            file2 = self.data_dir / self.config['data']['file2']
             
             # Load both files
             self.logger.info("Loading primary dataset...")
@@ -211,7 +222,8 @@ class DataLoader:
             # Final validation
             self._perform_final_validation(df_merged)
             
-            self.logger.info("Data loading and validation completed successfully")
+            self.logger.info(
+                "Data loading and validation completed successfully")
             return df_merged
             
         except Exception as e:
@@ -239,11 +251,13 @@ class DataLoader:
         actual_weeks = len(df)
         completeness = (actual_weeks / expected_weeks) * 100
         
-        self.logger.info(f"Data completeness: {completeness:.1f}% "
-                        f"({actual_weeks}/{expected_weeks} weeks)")
+        self.logger.info(
+            f"Data completeness: {completeness:.1f}% "
+            f"({actual_weeks}/{expected_weeks} weeks)")
         
         # Summary statistics
-        numeric_cols = ['Temp_avg', 'Relative_Humidity', 'Wind_kmh', 'Precipitation_mm']
+        numeric_cols = [
+            'Temp_avg', 'Relative_Humidity', 'Wind_kmh', 'Precipitation_mm']
         summary = df[numeric_cols].describe()
         self.logger.info(f"Summary statistics:\n{summary}")
     
