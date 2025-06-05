@@ -73,10 +73,12 @@ models:
   
   # Random Forest parameters
   rf:
-    n_estimators: [100, 200, 300]
-    max_depth: [10, 20, 30, null]
-    min_samples_split: [2, 5, 10]
-    min_samples_leaf: [1, 2, 4]
+    n_trials: 100  # Number of Optuna trials
+    param_ranges:
+      n_estimators: [100, 500]
+      max_depth: [10, 50]
+      min_samples_split: [2, 20]
+      min_samples_leaf: [1, 10]
   
   # XGBoost parameters
   xgb:

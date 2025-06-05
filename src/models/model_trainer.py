@@ -54,27 +54,37 @@ class ModelTrainer:
     
     def train_random_forest(self, X_train, y_train, config):
         """
-        Train Random Forest model with hyperparameter tuning.
+        Train Random Forest model with Optuna hyperparameter optimization.
         """
-        self.logger.info("Training Random Forest model...")
-        param_grid = config.get('param_grid', {
-            'n_estimators': [100, 200],
-            'max_depth': [None, 10, 20]
-        })
+        self.logger.info("Training Random Forest model with Optuna...")
+        import optuna
+        from sklearn.model_selection import cross_val_score
+        from sklearn.ensemble import RandomForestRegressor
         
-        rf = RandomForestRegressor(random_state=42)
-        grid_search = GridSearchCV(
-            estimator=rf,
-            param_grid=param_grid,
-            cv=3,
-            scoring='neg_mean_squared_error',
-            n_jobs=-1
-        )
-        grid_search.fit(X_train, y_train)
+        def objective(trial):
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
+                'max_depth': trial.suggest_int('max_depth', 10, 50, step=10),
+                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+                'bootstrap': trial.suggest_categorical('bootstrap', [True, False]),
+                'random_state': 42
+            }
+            model = RandomForestRegressor(**params)
+            score = cross_val_score(model, X_train, y_train, cv=3, scoring='neg_mean_squared_error').mean()
+            return score
         
-        self.best_params['random_forest'] = grid_search.best_params_
-        self.logger.info(f"Best RF params: {grid_search.best_params_}")
-        return grid_search.best_estimator_
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=config.get('n_trials', 50))
+        
+        best_params = study.best_params
+        self.best_params['random_forest'] = best_params
+        self.logger.info(f"Best RF params: {best_params}")
+        
+        # Train the model with best parameters on the entire training set
+        best_rf = RandomForestRegressor(**best_params)
+        best_rf.fit(X_train, y_train)
+        return best_rf
     
     def train_knn(self, X_train, y_train, config):
         """
