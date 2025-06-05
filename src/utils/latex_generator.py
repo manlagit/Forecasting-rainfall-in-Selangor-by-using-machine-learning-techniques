@@ -1,230 +1,97 @@
-import matplotlib.pyplot as plt
-from pathlib import Path
+"""
+LaTeX Report Generation Module
+Generates LaTeX reports for rainfall forecasting results.
+"""
+
 import logging
+import pandas as pd
+import os
+from pathlib import Path
 
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
-def generate_full_report(model_metrics, best_model, best_rmse, output_dir="reports/latex"):
+def generate_latex_report(comparison_df: pd.DataFrame, 
+                         y_test: pd.Series, 
+                         y_pred: pd.Series, 
+                         best_model_name: str,
+                         output_dir: str = "reports/latex") -> str:
     """
-    Generate a full LaTeX report document for the rainfall forecasting project.
-    
-    Args:
-        model_metrics (dict): Dictionary with model names as keys and metrics dictionaries as values
-        best_model (str): Name of the best performing model
-        best_rmse (float): RMSE score of the best model
-        output_dir (str): Output directory for the report file
-        
-    Returns:
-        Path: Path to the generated LaTeX report file
+    Generate a LaTeX report with model performance and visualizations.
     """
-    # Create output directory
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    report_path = output_path / "rainfall_forecasting_report.tex"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    report_path = os.path.join(output_dir, "rainfall_report.tex")
     
-    # Create LaTeX document
+    # Create LaTeX content
     latex_content = r"""
 \documentclass{article}
 \usepackage{graphicx}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.18}
 \usepackage{booktabs}
-\usepackage{array}
 \usepackage{geometry}
 \geometry{a4paper, margin=1in}
-\usepackage{longtable}
-\usepackage{xcolor}
-\usepackage{hyperref}
-
-\title{Rainfall Forecasting in Selangor: Machine Learning Approaches}
-\author{Data Science Team}
+\title{Rainfall Forecasting Report}
+\author{Machine Learning Project}
 \date{\today}
 
 \begin{document}
-
 \maketitle
 
-\section{Executive Summary}
-This report presents the analysis of rainfall patterns in Selangor, Malaysia, 
-using various machine learning techniques. 
-The project aims to develop accurate forecasting models to predict weekly 
-rainfall amounts based on historical weather data.
+\section{Introduction}
+This report summarizes the results of rainfall forecasting in Selangor using machine learning techniques. 
+The analysis includes model performance metrics and visualizations of the predictions.
 
-\section{Data Description}
-The dataset contains weekly weather measurements from 2012 to 2021, 
-including:
-\begin{itemize}
-    \item Temperature (average)
-    \item Relative Humidity
-    \item Wind speed (km/h)
-    \item Precipitation (mm)
-\end{itemize}
+\section{Model Comparison}
+The following table shows the performance metrics for each model:
 
-\section{Methodology}
-We employed the following machine learning algorithms:
-\begin{itemize}
-    \item Multiple Linear Regression (MLR)
-    \item K-Nearest Neighbors (KNN)
-    \item Random Forest (RF)
-    \item Extreme Gradient Boosting (XGBoost)
-    \item Artificial Neural Network (ANN)
-\end{itemize}
-
-Models were evaluated using RMSE, MAE, MAPE, and R-squared metrics. 
-A comprehensive comparison was performed to identify the best-performing model.
-
-\section{Results}
-"""
-
-    # Add model comparison table
-    latex_content += r"""
-\subsection{Model Performance Comparison}
-\begin{center}
-\begin{tabular}{lcccc}
+\begin{table}[h]
+\centering
+\caption{Model Performance Comparison}
+\begin{tabular}{lccc}
 \toprule
-Model & RMSE & MAE & R-squared & MAPE (\%) \\
+Model & RMSE & MAE & R\textsuperscript{2} \\
 \midrule
-"""
-    
-    for model, metrics in model_metrics.items():
-        latex_content += (
-            f"{model} & {metrics['RMSE']:.4f} & {metrics['MAE']:.4f} & "
-            f"{metrics['R2']:.4f} & {metrics['MAPE']:.2f} \\\\\n"
-        )
-    
-    latex_content += r"""\bottomrule
+""" + _df_to_latex(comparison_df) + r"""
+\bottomrule
 \end{tabular}
-\end{center}
-"""
+\end{table}
 
-    # Highlight best model
-    latex_content += f"""
-\\subsection{{Best Performing Model}}
-The best-performing model was \\textbf{{{best_model}}}, 
-achieving an RMSE of {best_rmse:.4f}. 
-This model demonstrated superior predictive accuracy compared to other approaches.
-"""
+The best performing model is \textbf{""" + best_model_name.replace('_', r'\_') + r"""}.
 
-    # Add visualizations section
-    latex_content += r"""
-\subsection{Visualizations}
-
+\section{Visualizations}
+\subsection{Time Series of Rainfall}
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\textwidth]{actual_vs_predicted.png}
-\caption{Actual vs Predicted Rainfall}
-\label{fig:actual_pred}
+\includegraphics[width=0.8\textwidth]{figures/time_series.png}
+\caption{Time Series of Actual Rainfall}
 \end{figure}
 
+\subsection{Prediction vs Actual}
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\textwidth]{residuals_distribution.png}
-\caption{Residuals Distribution}
-\label{fig:residuals}
+\includegraphics[width=0.8\textwidth]{figures/""" + best_model_name + r"""_pred_vs_actual.png}
+\caption{Predicted vs Actual Rainfall (""" + best_model_name.replace('_', r'\_') + r""")}
 \end{figure}
 
+\subsection{Model Comparison}
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\textwidth]{feature_importance.png}
-\caption{Feature Importance}
-\label{fig:feature_imp}
+\includegraphics[width=0.8\textwidth]{figures/model_comparison.png}
+\caption{Model Performance Comparison}
 \end{figure}
-"""
-
-    # Add conclusion
-    latex_content += r"""
-\section{Conclusion}
-The machine learning models developed in this study demonstrate promising 
-results for rainfall forecasting in Selangor. 
-The \textbf{""" + best_model + r"""} model achieved the best performance 
-with an RMSE of """ + f"{best_rmse:.4f}" + r""".
-
-Key findings include:
-\begin{itemize}
-    \item Rainfall patterns in Selangor show significant seasonal variation
-    \item Feature engineering (lag features, moving averages) improved model performance
-    \item Ensemble methods (Random Forest, XGBoost) outperformed linear models
-\end{itemize}
-
-\section{Future Work}
-Future work could explore:
-\begin{itemize}
-    \item Incorporating additional weather parameters (pressure, cloud cover)
-    \item Using deep learning approaches (LSTM, GRU) for sequence modeling
-    \item Ensemble modeling techniques to combine predictions
-    \item Real-time forecasting system implementation
-\end{itemize}
 
 \end{document}
 """
     
-    # Save to file
-    with open(report_path, "w", encoding="utf-8") as f:
+    # Save LaTeX file
+    with open(report_path, 'w') as f:
         f.write(latex_content)
-    
-    logger.info(f"Generated full LaTeX report at {report_path}")
+        
     return report_path
 
-
-def generate_latex_report(results_df, actual, predictions, model_name, output_dir="reports/latex"):
+def _df_to_latex(df: pd.DataFrame) -> str:
     """
-    Generate LaTeX report components including results table and visualizations
-    
-    Args:
-        results_df (pd.DataFrame): DataFrame with model performance metrics
-        actual (np.array): Actual target values
-        predictions (np.array): Predicted values
-        model_name (str): Name of the model being evaluated
-        output_dir (str): Output directory for LaTeX components
-        
-    Returns:
-        dict: Paths to generated components
+    Convert DataFrame to LaTeX table rows.
     """
-    # Create output directory
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    # Generate results table in LaTeX format
-    latex_table = results_df.to_latex(
-        index=False, 
-        float_format="%.4f", 
-        caption="Model Performance Metrics",
-        label="tab:model_performance",
-        position="h"
-    )
-    
-    # Save table to file
-    table_path = output_path / "results_table.tex"
-    with open(table_path, "w") as f:
-        f.write(latex_table)
-    
-    # Generate actual vs predicted plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(actual, label="Actual Rainfall")
-    plt.plot(predictions, label="Predicted Rainfall")
-    plt.title(f"Actual vs Predicted Rainfall ({model_name})")
-    plt.xlabel("Sample Index")
-    plt.ylabel("Rainfall (mm)")
-    plt.legend()
-    plot_path = output_path / f"actual_vs_predicted_{model_name}.png"
-    plt.savefig(plot_path)
-    plt.close()
-    
-    # Generate error distribution plot
-    errors = actual - predictions
-    plt.figure(figsize=(10, 6))
-    plt.hist(errors, bins=30, alpha=0.7)
-    plt.title(f"Error Distribution ({model_name})")
-    plt.xlabel("Prediction Error (mm)")
-    plt.ylabel("Frequency")
-    error_path = output_path / f"error_distribution_{model_name}.png"
-    plt.savefig(error_path)
-    plt.close()
-    
-    return {
-        "results_table": table_path,
-        "actual_vs_predicted": plot_path,
-        "error_distribution": error_path
-    }
+    rows = []
+    for index, row in df.iterrows():
+        row_str = index.replace('_', r'\_') + " & "
+        row_str += f"{row['RMSE']:.4f} & {row['MAE']:.4f} & {row['R2']:.4f} \\\\"
+        rows.append(row_str)
+    return "\n".join(rows)

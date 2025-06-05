@@ -266,6 +266,19 @@ class DataLoader:
         summary = df[numeric_cols].describe()
         self.logger.info(f"Summary statistics:\n{summary}")
     
+    def save_sample_data(self, df: pd.DataFrame, filename: str = "sample_data.csv") -> None:
+        """
+        Save sample data for system testing.
+        
+        Args:
+            df: DataFrame to save
+            filename: Output file name
+        """
+        sample_path = self.data_dir / filename
+        sample_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(sample_path, index=False)
+        self.logger.info(f"Saved sample data to {sample_path}")
+        
     def save_processed_data(self, df: pd.DataFrame, 
                            filepath: str = "data/interim/merged_data.csv") -> None:
         """

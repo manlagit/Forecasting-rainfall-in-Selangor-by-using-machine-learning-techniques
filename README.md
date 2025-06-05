@@ -35,6 +35,13 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Note on LaTeX Installation
+For report generation, you'll need a LaTeX distribution installed:
+- Windows: [MiKTeX](https://miktex.org/)
+- macOS: [MacTeX](https://www.tug.org/mactex/)
+- Linux: `sudo apt-get install texlive-full` (Ubuntu/Debian)
+
+
 ## Usage
 
 ### Quick System Test

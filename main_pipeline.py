@@ -114,77 +114,72 @@ def main():
         # Prepare processed dataframe for visualization
         df_processed = df_features.copy()
         
-        # Step 4: Model Evaluation
-        logger.info("Step 4: Evaluating models...")
+        # Step 7: Model Evaluation
+        logger.info("Step 7: Evaluating models...")
         evaluator = ModelEvaluator()
         
         # Evaluate each model
         for model_name, model in models.items():
-            if model_name == 'linear_regression':
-                selected_features = trainer.best_params[
-                    'linear_regression'
-                ]['selected_features']
-                y_pred = model.predict(X_test[selected_features])
-            elif model_name == 'ann':
-                y_pred = model.predict(X_test).flatten()
-            elif model_name == 'arima':
-                # Skip ARIMA for now due to complexity
-                continue
+            if model_name == 'ann':
+                y_pred = model.predict(X_test_scaled).flatten()
             else:
-                y_pred = model.predict(X_test)
+                y_pred = model.predict(X_test_scaled)
             
-            # Evaluate model (use inverse transformed values)
-            target_scaler = preprocessor.target_scaler
-            y_pred_inverse = target_scaler.inverse_transform(
+            # Inverse transform predictions and actual values
+            y_pred_inverse = preprocessor.target_scaler.inverse_transform(
                 y_pred.reshape(-1, 1)
             ).flatten()
-            y_test_inverse = target_scaler.inverse_transform(
-                y_test.values.reshape(-1, 1)
+            y_test_inverse = preprocessor.target_scaler.inverse_transform(
+                y_test_scaled.reshape(-1, 1)
             ).flatten()
-            evaluator.evaluate_model(
-                y_test_inverse, y_pred_inverse, model_name
-            )
+            
+            evaluator.evaluate_model(y_test_inverse, y_pred_inverse, model_name)
         
         # Generate comparison and save results
         comparison_df = evaluator.compare_models()
-        evaluator.save_results()
+        evaluator.save_results("results")
         
         # Print summary
         print("\n" + evaluator.generate_summary_report())
         
-        # Step 5: Generate Visualizations
-        logger.info("Step 5: Generating visualizations...")
+        # Step 8: Generate Visualizations
+        logger.info("Step 8: Generating visualizations...")
         visualizer = RainfallVisualizer()
+        
+        # Prepare data for visualization (include date and actual values)
+        df_processed = pd.concat([
+            df_raw.iloc[split_index:].reset_index(drop=True),
+            pd.Series(y_test_inverse, name='Precipitation_actual'),
+            pd.DataFrame({f"{model_name}_pred": evaluator.predictions[model_name]['pred'] 
+                         for model_name in models.keys()}, index=X_test.index)
+        ], axis=1)
         
         # Generate all plots
         plot_paths = visualizer.generate_all_plots(
             df_processed, 
             comparison_df, 
-            evaluator.predictions
+            evaluator.predictions,
+            "reports/figures"
         )
         logger.info(f"Generated {len(plot_paths)} visualization plots")
         
-        # Step 6: Generate LaTeX Report
-        logger.info("Step 6: Generating LaTeX report...")
+        # Step 9: Generate LaTeX Report
+        logger.info("Step 9: Generating LaTeX report...")
         
         # Get predictions for the best model
         best_model_name = comparison_df.index[0]
         best_model = models[best_model_name]
-        y_pred = best_model.predict(X_test)
+        y_pred_best = evaluator.predictions[best_model_name]['pred']
         
         # Generate the LaTeX report file
         report_path = generate_latex_report(
             comparison_df, 
-            y_test, 
-            y_pred, 
+            y_test_inverse, 
+            y_pred_best, 
             best_model_name,
-            output_dir="reports/latex"
+            "reports/latex"
         )
         logger.info(f"Generated LaTeX report at: {report_path}")
-        
-        # Note: PDF compilation would need to be done manually
-        # or through a separate process
-        logger.info("Please compile the LaTeX report to PDF manually")
         
         # Pipeline completion
         logger.info("="*60)
