@@ -125,11 +125,15 @@ def main():
                 y_pred = model.predict(X_test_scaled)
             
             # Inverse transform predictions and actual values
+            # Convert to numpy array before reshaping
+            y_pred_array = y_pred.values if isinstance(y_pred, pd.Series) else y_pred
+            y_test_array = y_test_scaled.values if isinstance(y_test_scaled, pd.Series) else y_test_scaled
+            
             y_pred_inverse = preprocessor.target_scaler.inverse_transform(
-                y_pred.reshape(-1, 1)
+                y_pred_array.reshape(-1, 1)
             ).flatten()
             y_test_inverse = preprocessor.target_scaler.inverse_transform(
-                y_test_scaled.reshape(-1, 1)
+                y_test_array.reshape(-1, 1)
             ).flatten()
             
             evaluator.evaluate_model(y_test_inverse, y_pred_inverse, model_name)
