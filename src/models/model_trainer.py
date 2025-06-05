@@ -22,7 +22,7 @@ class ModelTrainer:
         """
         Initialize with configuration.
         """
-        self.config = load_yaml(config_path).get('model_training', {})
+        self.config = load_yaml(config_path).get('models', {})
         self.logger = logging.getLogger(__name__)
         self.models = {}
         self.best_params = {}
@@ -32,23 +32,18 @@ class ModelTrainer:
         """
         Train all specified models with hyperparameter tuning.
         """
-        # Train Random Forest
-        if 'random_forest' in self.config:
-            rf_config = self.config['random_forest']
-            rf = self.train_random_forest(X_train, y_train, rf_config)
-            self.models['random_forest'] = rf
+        # Map config keys to model names (only include implemented models)
+        model_mapping = {
+            'rf': ('random_forest', self.train_random_forest),
+            'xgb': ('xgboost', self.train_xgboost),
+            'knn': ('knn', self.train_knn)
+        }
         
-        # Train KNN
-        if 'knn' in self.config:
-            knn_config = self.config['knn']
-            knn = self.train_knn(X_train, y_train, knn_config)
-            self.models['knn'] = knn
-        
-        # Train XGBoost
-        if 'xgboost' in self.config:
-            xgb_config = self.config['xgboost']
-            xgb = self.train_xgboost(X_train, y_train, xgb_config)
-            self.models['xgboost'] = xgb
+        for config_key, (model_name, train_func) in model_mapping.items():
+            if config_key in self.config:
+                config = self.config[config_key]
+                model = train_func(X_train, y_train, config)
+                self.models[model_name] = model
         
         return self.models
     
@@ -75,7 +70,10 @@ class ModelTrainer:
             return score
         
         study = optuna.create_study(direction='maximize')
-        study.optimize(objective, n_trials=config.get('n_trials', 50))
+        try:
+            study.optimize(objective, n_trials=config.get('n_trials', 50))
+        except KeyboardInterrupt:
+            self.logger.info("Optimization was interrupted. Using best model from current trials.")
         
         best_params = study.best_params
         self.best_params['random_forest'] = best_params

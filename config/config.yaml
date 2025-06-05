@@ -73,7 +73,7 @@ models:
   
   # Random Forest parameters
   rf:
-    n_trials: 100  # Number of Optuna trials
+    n_trials: 50  # Number of Optuna trials
     param_ranges:
       n_estimators: [100, 500]
       max_depth: [10, 50]

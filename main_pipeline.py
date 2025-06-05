@@ -104,9 +104,8 @@ def main():
         # Step 6: Model Training
         logger.info("Step 6: Training models...")
         trainer = ModelTrainer()
-        dates_train = df_raw.iloc[:split_index]['Date']  # Use original dates
         models = trainer.train_all_models(
-            X_train_scaled, y_train_scaled, dates_train
+            X_train_scaled, y_train_scaled
         )
         trainer.save_models()
         logger.info(f"Trained and saved {len(models)} models")
@@ -171,12 +170,35 @@ def main():
         best_model = models[best_model_name]
         y_pred_best = evaluator.predictions[best_model_name]['pred']
         
+        # Generate additional visualizations for report
+        residual_plot_path = os.path.join("reports/figures", f"{best_model_name}_residuals.png")
+        visualizer.plot_residuals(
+            y_test_inverse, 
+            y_pred_best, 
+            best_model_name,
+            residual_plot_path
+        )
+        
+        feature_importance_path = os.path.join("reports/figures", f"{best_model_name}_feature_importance.png")
+        if hasattr(best_model, 'feature_importances_'):
+            visualizer.plot_feature_importance(
+                best_model, 
+                X_train.columns, 
+                best_model_name,
+                feature_importance_path
+            )
+        else:
+            logger.warning(f"Model {best_model_name} does not support feature importance visualization")
+            feature_importance_path = "reports/figures/feature_importance_placeholder.png"
+        
         # Generate the LaTeX report file
         report_path = generate_latex_report(
             comparison_df, 
             y_test_inverse, 
             y_pred_best, 
             best_model_name,
+            feature_importance_path,
+            residual_plot_path,
             "reports/latex"
         )
         logger.info(f"Generated LaTeX report at: {report_path}")
