@@ -25,28 +25,45 @@ class DataPreprocessor:
             self.config = load_yaml(config_path).get('preprocessing', {})
             self.logger = logging.getLogger(__name__)
             
-            # Initialize scalers
-            self.feature_scaler = StandardScaler()
-            self.target_scaler = StandardScaler()
+            # Get scaling method from config
+            scaling_method = self.config.get('scaling_method', 'standard')
             
-            self.logger.info("Initialized DataPreprocessor")
+            # Initialize scalers based on config
+            if scaling_method == 'minmax':
+                from sklearn.preprocessing import MinMaxScaler
+                self.feature_scaler = MinMaxScaler()
+                self.target_scaler = MinMaxScaler()
+            else:  # default to standard scaling
+                self.feature_scaler = StandardScaler()
+                self.target_scaler = StandardScaler()
+            
+            self.logger.info(f"Initialized DataPreprocessor with {scaling_method} scaling")
         except Exception as e:
             logging.error(f"Error initializing DataPreprocessor: {str(e)}")
             raise
 
     def handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Fill missing values with mean for numeric columns.
+        Fill missing values using specified imputation method.
         """
+        imputation_method = self.config.get('imputation_method', 'mean')
         numeric_cols = [
             'Temp_avg', 'Relative_Humidity', 
             'Wind_kmh', 'Precipitation_mm'
         ]
-        for col in numeric_cols:
-            if col in df.columns and df[col].isnull().sum() > 0:
-                mean_val = df[col].mean()
-                df[col].fillna(mean_val, inplace=True)
-                self.logger.info(f"Imputed {col} with mean: {mean_val:.2f}")
+        
+        if imputation_method == 'knn':
+            from sklearn.impute import KNNImputer
+            self.logger.info("Using KNN imputer for missing values")
+            imputer = KNNImputer(n_neighbors=5)
+            df[numeric_cols] = imputer.fit_transform(df[numeric_cols])
+        else:  # default to mean imputation
+            self.logger.info("Using mean imputation for missing values")
+            for col in numeric_cols:
+                if col in df.columns and df[col].isnull().sum() > 0:
+                    mean_val = df[col].mean()
+                    df[col].fillna(mean_val, inplace=True)
+                    self.logger.info(f"Imputed {col} with mean: {mean_val:.2f}")
         return df
 
     def cap_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
