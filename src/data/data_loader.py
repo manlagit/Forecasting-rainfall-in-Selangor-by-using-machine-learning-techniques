@@ -38,9 +38,12 @@ class DataLoader:
         
         # Expected data schema
         self.expected_columns = [
-            'Date', 'Temp_avg', 'Relative_Humidity', 
+            'Date', 'Temp_avg', 'Relative_Humidity',
             'Wind_kmh', 'Precipitation_mm', 'Week_Number', 'Year'
         ]
+        
+        # Optional columns
+        self.optional_columns = ['Week_Number', 'Year']
         
         # Data validation ranges
         self.validation_ranges = {
@@ -101,14 +104,15 @@ class DataLoader:
             df: DataFrame to validate
             filename: Name of file for error reporting
         """
-        missing_cols = set(self.expected_columns) - set(df.columns)
+        required_cols = set(self.expected_columns) - set(self.optional_columns)
+        missing_cols = required_cols - set(df.columns)
         if missing_cols:
             raise ValueError(f"Missing columns in {filename}: {missing_cols}")
-        
+
         extra_cols = set(df.columns) - set(self.expected_columns)
         if extra_cols:
             self.logger.warning(f"Extra columns in {filename}: {extra_cols}")
-        
+
         self.logger.info(f"Schema validation passed for {filename}")
     
     def _validate_ranges(self, df: pd.DataFrame, filename: str) -> None:
