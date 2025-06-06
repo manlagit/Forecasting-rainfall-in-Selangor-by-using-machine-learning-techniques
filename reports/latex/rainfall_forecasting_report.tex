@@ -9,6 +9,9 @@
 \usepackage{geometry}
 \usepackage{hyperref}
 \usepackage{caption}
+\usepackage{pgfplots}
+\usepackage{tikz}
+\pgfplotsset{compat=1.18}
 
 % Page setup
 \geometry{a4paper, margin=1in}
@@ -19,11 +22,68 @@
 \date{\today}
 
 \begin{document}
+
+% Chapter 1: Introduction
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Research Background}
+\label{sec:research_background}
+Rainfall patterns in Selangor region of Malaysia fluctuate widely partially driven by the tropical climate. In Selangor precipitation patterns are significantly influenced by tropical climate with the heaviest rainfall happening between October and December. November is the peak of this season where 324 mm of rainfall is experienced across 28 days. In October 222 mm of rainfall is experienced while in December 246 mm of rainfall is experienced. At the beginning of the year the amount of rainfall is relatively lower. January and February receive 148 mm and 102 mm respectively. However, April receives a rainfall of 241 mm which is comparable to precipitation received in peak season. During the summer months of June and July relatively lower rainfall amounts of 145 mm and 135 mm respectively are received (Nomadseason, 2025). These seasonal patterns have a major influence on local ecosystems as well as agriculture activities and water management. The Malaysian Meteorological Department (2025) analysed annual rainfall data from 1951 to 2023 and found there has been an upward trend in the amount of rainfall received in the country. This points to climate change that can lead to higher temperatures, rising sea levels, often occurrence of extreme events such as floods, disruption of habitats and agricultural activities, and economic losses. These fluctuations make it difficult to accurately forecast climate patterns. Climatic events such as frequent and heavy rainfall can lead to crop failure, floods, and water contamination. Similarly, seasons such as the monsoon have a significant influence on rainfall and its distribution. The Department of Irrigation and Drainage Malaysia (2025) describes monsoon rains as “typically of long duration with intermittent heavy bursts and the intensity can occasionally exceed several hundred mm in 24 hours”. This can lead to floods in urban areas and disruption of agricultural activities. Accurate forecasting will help the Selangor State Government in mitigating the effects of these events. Equipped with accurate forecasts the state government can put in place well planned emergency as well as disaster and preparedness strategies.
+
+Machine learning models have become a critical tool in analysis of meteorological data. When comparing machine learning models with conventional Numerical Weather Prediction models, it has been observed machine learning models are superior at detecting intricate numerical and non-linear patterns in data (Bouallègue et al., 2024). This makes machine learning a suitable approach for predicting rainfall in a tropical region like Selangor. Large amounts of meteorological data can be analysed using machine learning techniques such as support vector machines (SVM), gradient boosting, and artificial neural networks (ANN) to provide accurate temporal estimations. These methods that will be discussed later, use historical data such as temperature, humidity, wind speed, and rainfall to provide accurate forecasts which were hitherto impossible using traditional techniques such as linear regression.
+
+The problem is critical in places such as Selangor, where rainy conditions have not been accurately forecasting posing several difficulties. Hydrological functions enhanced by better rainfall predictions enable timely decisions in crop production, disaster management including floods and landslides, and water management. Due to improved accuracy levels of predictions, stakeholders will be in a position to save structures from destruction, people from hunger as well as resources from wastage.
+
+Recent advances in machine learning have expanded possibilities for improving rainfall forecasting. Machine learning methods like support vector machines, gradient boosting, and artificial neural networks have shown great potential in capturing both temporal and spatial patterns of rainfall. These models are able to improve forecasts by continuously learning from new data. In Selangor, using machine learning techniques and local meteorological data presents an opportunity to develop a forecasting system that is highly accurate.
+
+\section{Problem Statement}
+\label{sec:problem_statement}
+Climate change has received significant global attention due to disastrous events it can cause. Rainfall is a major meteorological factor that is influenced by climate change. In Malaysia, rainfall patterns have changed causing floods and droughts. Selangor is one the states that has been affected by these changes in rainfall patterns. Disastrous floods happened consecutively in the years 2006 to 2008 and in the years 2010 and 2011. The years 1997, 1998, and 2008 had catastrophic dry periods (Talib et al., 2024). Agricultural decisions and productivity are significantly influenced by environmental variables particularly the amount of water available and rainfall. In Selangor the influence of these variables is significant and a threat to agricultural productivity. High and low rainfall affects crops. Although it is possible to mitigate low rainfall through irrigation, high rainfall usually damages crops and results in low agricultural productivity. Mitigation measures such as changing crop cycles and combining crop cycles have not been adequate. To adequately solve these problems technological solutions are required (Alam, 2021).
+
+One of the technological solutions that can be used is availing accurate rainfall predictions. However, due to irregular occurrence of rainfall in Timur Region Selangor accurate prediction is difficult. This situation can harm farming, cause floods, and cause difficulties in water resources planning. Traditional models such as linear regression may not provide accurate precipitation forecast especially in the tropics because the atmospheric behaviour is not easy to predict. For example, Kassem et al. (2021) reported artificial neural networks were superior to linear regression in predicting monthly rainfall in Northern Cyprus. That study showed artificial neural networks were better at capturing relationships in coordinates, meteorological variables, and rainfall resulting in more accurate prediction compared to linear regression. Traditional models such as linear regression are weak at capturing complex relationships especially when they are non-linear. Compared to models such as support vector machines and artificial neural networks, linear regression models are poor at handling non-linear relationships. Conversely, support vector machines and artificial neural networks are difficult to interpret, computationally costly, and require large amounts of data (Goodfellow et al., 2023; Murphy, 2022). Modern meteorological research does not face the limitations of small datasets and limited computational power that were prevalent several decades ago. Meteorological instruments and IoT sensors have enabled accumulation of large datasets. This situation enables use of advanced machine learning models such as support vector machines and artificial neural networks in predicting rainfall. Specifically, in Selangor large volumes of meteorological data are available. Therefore, these advanced machine learning models can be used to accurate predict rainfall patterns. Insights obtained will be useful in agricultural, infrastructure, public health, and water management planning.
+
+\section{Research Questions}
+\label{sec:research_questions}
+The specific research questions that will be investigated in this study are:
+\begin{itemize}
+    \item[i.] What are the machine learning models that can be used for rainfall prediction in Selangor?
+    \item[ii.] How does the performance of different machine learning models differ?
+    \item[iii.] What is the best model in forecasting rainfall pattern in Selangor?
+\end{itemize}
+
+\section{Research Objectives}
+\label{sec:research_objectives}
+The broad objective of this study is to investigate the use of machine learning models in predicting rainfall in Selangor region of Malaysia. The specific objectives are:
+\begin{itemize}
+    \item[i.] To employ machine learning models that can be used for predicting rainfall in Selangor.
+    \item[ii.] To estimate and assess the performance of different machine learning models using performance metrics such as mean absolute error (MAE), mean squared error (MSE), root mean squared error (RMSE), and AUC-ROC (Area Under the Receiver Operating Characteristic Curve).
+    \item[iii.] To identify the best model for forecasting rainfall patterns in Selangor by comparing performance metrics and selecting the model with highest accuracy.
+\end{itemize}
+
+\section{Research Scopes}
+\label{sec:research_scopes}
+This research deals with rainfall prediction for Selangor, Malaysia where the rainfall has irregular tropical pattern and significantly affects sectors such as water supply and flood control, agriculture. These problems will be addressed in this work by utilising and comparing a number of machine learning algorithms with support vector machines (SVM), gradient boosting, and artificial neural networks (ANN). These methods were chosen due to the possibility of the interpretation of which dependencies – both linear and nonlinear ones – are present in the data. In the present study, meteorological data from Sepang/KL International Airport is employed for data analysis where necessary climatic factors embracing average temperature, relative humidity, wind velocity, and precipitation for the years between 2012 and 2020 are utilised. This is to make certain that the data collected are accurate and reliable to increase the efficiency of data analysis after it has been fed into the system therefore data cleaning, normalization of data, handling of missing values and feature engineering will be undertaken. To fully assess predictive performance, the model will be evaluated using measures like the Coefficient of Determination (R\textsuperscript{2}), Mean Absolute Error (MAE), and Root Mean Square Error (RMSE).
+
+\section{Significance of Study}
+\label{sec:significance_of_study}
+The research focus on using machine learning for rainfall forecasting in Selangor. Machine learning techniques utilize historical data to identify complex relationships, resulting in more precise and current forecasts. This study improves the scientific understanding of based on rainfall forecasting by evaluating how well different machine learning algorithms capture detailed tropical rainfall patterns. It represents a major breakthrough in environmental prediction and building resilience since it expands the use of machine learning for tropical weather forecasting and offers a structure that can be adjusted for different climates. The forecasting results could help the government in enhancing disaster readiness.
+
 % Chapter 3: Methodology
 \chapter{Methodology}
 \label{chap:methodology}
 
 This chapter explain detailed methodology used for forecasting rainfall in Selangor using machine learning techniques. The process involve data acquisition, preprocessing, feature engineering, model implementation and evaluation framework.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for Data Science Methodology
+    \caption{Data Science Methodology}
+    \label{fig:3_1_data_science_methodology}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_1_data_science_methodology}:}
+This figure provides a high-level overview of the research process. It confirms the structured approach followed, ensuring all steps align with the objectives. The flowchart format aids readability and should be referenced to emphasize methodological rigor.
 
 \section{Data Acquisition and Integration}
 \label{sec:data_acquisition}
@@ -248,6 +308,16 @@ def create_ann_model(input_dim):
     return model
 \end{verbatim}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for ANN Implementation
+    \caption{Artificial Neural Network Implementation}
+    \label{fig:3_7_ann_implementation}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_7_ann_implementation}:}
+This figure displays Python code for ANN, including model building and training. ANN can perform classification or regression. Given AUC-ROC’s focus, assume a classification task (Rain\_Today). Discuss architecture (layers, neurons) and training parameters (e.g., epochs, optimizer) affecting AUC-ROC. Suggest visualizing the loss curve in PGFPlots.
+
 The model architecture consists of:
 \begin{itemize}
     \item Input layer with dimensionality matching the number of features
@@ -301,6 +371,36 @@ def create_knn_model(n_neighbors=5, weights='uniform',
     return model
 \end{verbatim}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for KNN Implementation
+    \caption{K-Nearest Neighbor Implementation}
+    \label{fig:3_4_knn_implementation}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_4_knn_implementation}:}
+This figure shows Python code for K-NN, including tools for finding the optimal k value. K-NN is applied to classify Rain\_Today. The figure sets the stage for optimizing k, critical for AUC-ROC performance. Discuss the distance metric used (e.g., Euclidean) and its suitability for meteorological data.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for Optimal K
+    \caption{Determination of Optimal k Value for K-NN}
+    \label{fig:3_5_knn_optimal_k}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_5_knn_optimal_k}:}
+This plot justifies the choice of k=8 by minimizing error, directly impacting AUC-ROC. Explain the methodology (e.g., cross-validation) and interpret the curve’s shape. Suggest recreating this in PGFPlots with error rates and k values for clarity.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for KNN Prediction
+    \caption{K-Nearest Neighbor Prediction with Optimal k}
+    \label{fig:3_6_knn_prediction_optimal_k}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_6_knn_prediction_optimal_k}:}
+This figure shows K-NN prediction code using k=8. It confirms the application of the optimal k. Analyze prediction accuracy and how AUC-ROC will quantify classification performance. Ensure consistency with Figure \ref{fig:3_4_knn_implementation}’s setup.
+
 KNN makes predictions based on the average of the k nearest training samples, making it effective for capturing local patterns in the data.
 
 \subsection{Random Forest (RF)}
@@ -325,6 +425,16 @@ def create_rf_model(n_estimators=100, max_depth=None,
     )
     return model
 \end{verbatim}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for RF Implementation
+    \caption{Random Forest Implementation}
+    \label{fig:3_3_rf_implementation}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:3_3_rf_implementation}:}
+This figure displays Python code for Random Forest with the same features and target as Logistic Regression (Rain\_Today). Random Forest can handle both classification and regression. Here, it’s used for classification. Analyze hyperparameter settings (e.g., number of trees, max depth) and their impact on AUC-ROC. Compare its performance potential to other classification models.
 
 Random Forest is well-suited for capturing non-linear relationships and providing feature importance metrics.
 
@@ -576,34 +686,45 @@ print(f"Best ARIMA parameters: {best_params} with AIC: {best_aic}")
 
 A standardized evaluation framework was implemented to assess and compare model performance.
 
-\subsection{Performance Metrics}
-\label{subsec:performance_metrics}
+\subsection{Model Evaluation and Comparison}
+\label{subsec:model_evaluation_comparison}
 
-The following metrics were used for model evaluation:
+To evaluate the performance of the machine learning models investigated in this study, a combination of metrics will be employed, with a particular emphasis on the Area Under the Receiver Operating Characteristic Curve (AUC-ROC). The metrics used include Mean Absolute Error (MAE), Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and AUC-ROC.
 
+\subsubsection{AUC-ROC Overview}
+AUC-ROC is a performance metric widely used for classification problems. It quantifies a model’s ability to distinguish between positive and negative classes by plotting the True Positive Rate (TPR, or sensitivity) against the False Positive Rate (FPR) across various threshold settings. The AUC represents the area under this ROC curve, with values ranging from 0 to 1:
 \begin{itemize}
-    \item Mean Absolute Error (MAE):
-    \begin{equation}
-    \text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|
-    \end{equation}
-    
-    \item Mean Squared Error (MSE):
-    \begin{equation}
-    \text{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2
-    \end{equation}
-    
-    \item Root Mean Squared Error (RMSE):
-    \begin{equation}
-    \text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}
-    \end{equation}
-    
-    \item Coefficient of Determination (R²):
-    \begin{equation}
-    R^2 = 1 - \frac{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{\sum_{i=1}^{n}(y_i - \bar{y})^2}
-    \end{equation}
+    \item An AUC of 1 indicates perfect discrimination.
+    \item An AUC of 0.5 suggests no discriminative power (random guessing).
+    \item An AUC below 0.5 indicates performance worse than random guessing.
 \end{itemize}
 
-where $y_i$ are the actual values, $\hat{y}_i$ are the predicted values, and $\bar{y}$ is the mean of the actual values.
+In the context of rainfall forecasting in Selangor, AUC-ROC will be applied to classification tasks, such as predicting whether rainfall will occur (rain/no rain) or categorizing rainfall intensity (e.g., low, medium, high). This is particularly relevant given the dataset’s target variable, precipitation, which may be transformed into categorical outcomes for certain models.
+
+\subsubsection{Mathematical Definition}
+The ROC curve is constructed by calculating:
+\begin{itemize}
+    \item \textbf{True Positive Rate (TPR):} \[ \text{TPR} = \frac{\text{TP}}{\text{TP} + \text{FN}} \] where TP is the number of true positives, and FN is the number of false negatives.
+    \item \textbf{False Positive Rate (FPR):} \[ \text{FPR} = \frac{\text{FP}}{\text{FP} + \text{TN}} \] where FP is the number of false positives, and TN is the number of true negatives.
+\end{itemize}
+The AUC is then computed as the integral of the ROC curve, often approximated numerically in practice.
+
+\subsubsection{Application to Models}
+\begin{itemize}
+    \item For classification models (e.g., Logistic Regression, Random Forest, K-Nearest Neighbor), AUC-ROC will be the primary metric to assess how well the model distinguishes between rainfall events.
+    \item For regression models (e.g., Multiple Linear Regression, ARIMA), MAE, MSE, and RMSE will remain relevant to evaluate the accuracy of continuous precipitation predictions.
+    \item If a model performs both regression and classification (e.g., predicting rainfall amount and occurrence), both sets of metrics will be reported.
+\end{itemize}
+
+\subsubsection{Evaluation Process}
+\begin{itemize}
+    \item Models will be trained on the 80\% training subset and evaluated on the 20\% test subset.
+    \item AUC-ROC scores will be calculated using Python’s \texttt{scikit-learn} library (e.g., \texttt{roc\_auc\_score} and \texttt{roc\_curve} functions).
+    \item Results will be presented in tables and visualized using ROC curves, generated in Python and recreated in LaTeX with PGFPlots for the final report.
+\end{itemize}
+
+\subsubsection{Significance}
+AUC-ROC provides a robust, threshold-independent measure of model performance, making it ideal for comparing classification models in this study. Its inclusion enhances the evaluation framework by addressing the classification aspects of rainfall forecasting, complementing the regression-focused metrics.
 
 \subsection{Evaluation Function}
 \label{subsec:evaluation_function}
@@ -974,6 +1095,24 @@ The dataset initially contained a small percentage of missing values (1.8\%). Af
 
 Using the IQR method, outliers were identified in the dataset. Table \ref{tab:outlier_detection} summarizes the outlier detection results.
 
+\subsection{Correlation Analysis}
+\label{subsec:correlation_analysis_results}
+
+The relationships between weather variables were examined using a correlation matrix.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for Correlation Matrix
+    \caption{Figure 4.1: Correlation Matrix of Weather Variables}
+    \label{fig:chap4_fig1_correlation_matrix}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:chap4_fig1_correlation_matrix}:}
+The heatmap shows relationships between weather variables (e.g., negative temperature-humidity correlation). Discuss implications for model selection and performance (e.g., multicollinearity). This should be recreated in PGFPlots with a color-coded matrix for the final report.
+The correlation matrix highlights feature relationships. For example, a negative correlation between temperature and humidity, or a positive correlation between wind speed and temperature, can inform feature selection and engineering. Understanding these relationships is crucial for building effective predictive models, as highly correlated features might lead to multicollinearity issues in some models.
+
+Table \ref{tab:outlier_detection} summarizes the outlier detection results.
+
 \begin{table}[h]
 \centering
 \caption{Outlier Detection Results}
@@ -1050,13 +1189,13 @@ XGBoost & n\_estimators: 200, learning\_rate: 0.1, max\_depth: 6, subsample: 0.9
 \end{tabular}
 \end{table}
 
-The performance improvements achieved through hyperparameter tuning are shown in Figure \ref{fig:hyperparameter_tuning}.
+The performance improvements achieved through hyperparameter tuning are shown in Figure \ref{fig:chap4_fig2_hyperparameter_tuning}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/hyperparameter_tuning.png}
-\caption{Model performance improvement through hyperparameter tuning}
-\label{fig:hyperparameter_tuning}
+\caption{Figure 4.2: Model performance improvement through hyperparameter tuning}
+\label{fig:chap4_fig2_hyperparameter_tuning}
 \end{figure}
 
 \subsection{Optuna Results for ANN}
@@ -1072,13 +1211,13 @@ The optimal neural network architecture determined by Optuna included:
     \item Dropout rate: 0.15
 \end{itemize}
 
-Figure \ref{fig:optuna_optimization} shows the Optuna optimization process, demonstrating the convergence of the validation loss over multiple trials.
+Figure \ref{fig:chap4_fig3_optuna_optimization} shows the Optuna optimization process, demonstrating the convergence of the validation loss over multiple trials.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/optuna_optimization.png}
-\caption{Optuna optimization process for ANN hyperparameters}
-\label{fig:optuna_optimization}
+\caption{Figure 4.3: Optuna optimization process for ANN hyperparameters}
+\label{fig:chap4_fig3_optuna_optimization}
 \end{figure}
 
 \subsection{ARIMA Parameter Selection Results}
@@ -1124,13 +1263,13 @@ ARIMA & 27.83 & 1191.63 & 34.52 & 0.674 \\
 
 The results indicate that XGBoost achieved the best performance across all metrics, closely followed by Random Forest and ANN. The traditional statistical models (MLR and ARIMA) showed lower performance, suggesting that the rainfall patterns in Selangor have complex non-linear relationships that are better captured by more sophisticated models.
 
-Figure \ref{fig:model_comparison} visualizes the RMSE comparison across all models.
+Figure \ref{fig:chap4_fig4_model_comparison_rmse} visualizes the RMSE comparison across all models.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/model_comparison.png}
-\caption{Model comparison by RMSE}
-\label{fig:model_comparison}
+\caption{Figure 4.4: Model comparison by RMSE}
+\label{fig:chap4_fig4_model_comparison_rmse}
 \end{figure}
 
 \subsection{Statistical Significance Testing}
@@ -1177,13 +1316,13 @@ At a significance level of α = 0.05, the following conclusions can be drawn:
 \subsection{Predicted vs. Actual Time Series}
 \label{subsec:time_series_comparison}
 
-Figure \ref{fig:time_series_plot} shows the actual precipitation values alongside predictions from the top-performing models (XGBoost, Random Forest, and ANN) over the test period.
+Figure \ref{fig:chap4_fig5_time_series_plot} shows the actual precipitation values alongside predictions from the top-performing models (XGBoost, Random Forest, and ANN) over the test period.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/time_series_plot.png}
-\caption{Actual vs. predicted rainfall over time}
-\label{fig:time_series_plot}
+\caption{Figure 4.5: Actual vs. predicted rainfall over time}
+\label{fig:chap4_fig5_time_series_plot}
 \end{figure}
 
 The time series plot reveals that all models capture the general rainfall patterns, but struggle to predict extreme precipitation events. XGBoost and Random Forest tend to follow the actual values more closely than other models, especially during periods of moderate rainfall.
@@ -1191,13 +1330,13 @@ The time series plot reveals that all models capture the general rainfall patter
 \subsection{Prediction Scatter Plots}
 \label{subsec:prediction_scatter}
 
-Scatter plots of predicted vs. actual values provide insight into model accuracy across different rainfall intensities. Figure \ref{fig:xgb_scatter} shows the scatter plot for the best-performing model (XGBoost).
+Scatter plots of predicted vs. actual values provide insight into model accuracy across different rainfall intensities. Figure \ref{fig:chap4_fig6_xgb_scatter} shows the scatter plot for the best-performing model (XGBoost).
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/XGBoost_scatter.png}
-\caption{XGBoost: Predicted vs. actual precipitation}
-\label{fig:xgb_scatter}
+\caption{Figure 4.6: XGBoost: Predicted vs. actual precipitation}
+\label{fig:chap4_fig6_xgb_scatter}
 \end{figure}
 
 The scatter plot indicates that the model performs well for low to moderate rainfall values but tends to underestimate extreme precipitation events. This is a common challenge in rainfall forecasting, as extreme events are rare and often governed by complex atmospheric processes.
@@ -1205,13 +1344,13 @@ The scatter plot indicates that the model performs well for low to moderate rain
 \subsection{Residual Analysis}
 \label{subsec:residual_results}
 
-Residual analysis provides insights into the systematic errors in model predictions. Figure \ref{fig:xgb_residuals} shows the residual plots for the XGBoost model.
+Residual analysis provides insights into the systematic errors in model predictions. Figure \ref{fig:chap4_fig7_xgb_residuals} shows the residual plots for the XGBoost model.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/XGBoost_residuals.png}
-\caption{XGBoost: Residual analysis}
-\label{fig:xgb_residuals}
+\caption{Figure 4.7: XGBoost: Residual analysis}
+\label{fig:chap4_fig7_xgb_residuals}
 \end{figure}
 
 The residual plot reveals several patterns:
@@ -1224,13 +1363,13 @@ The residual plot reveals several patterns:
 \section{Feature Importance Analysis}
 \label{sec:feature_importance_results}
 
-Feature importance analysis helps identify the most influential predictors for rainfall forecasting. Figure \ref{fig:xgb_feature_importance} shows the feature importance for the XGBoost model.
+Feature importance analysis helps identify the most influential predictors for rainfall forecasting. Figure \ref{fig:chap4_fig8_xgb_feature_importance} shows the feature importance for the XGBoost model.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/XGBoost_feature_importance.png}
-\caption{XGBoost: Feature importance}
-\label{fig:xgb_feature_importance}
+\caption{Figure 4.8: XGBoost: Feature importance}
+\label{fig:chap4_fig8_xgb_feature_importance}
 \end{figure}
 
 The most important features for rainfall prediction were:
@@ -1250,13 +1389,13 @@ This analysis confirms the importance of both temporal patterns (lag variables a
 \subsection{XGBoost Results}
 \label{subsec:xgboost_results}
 
-As the best-performing model, XGBoost achieved an RMSE of 23.64 mm and an R² of 0.847, indicating that it explains approximately 84.7\% of the variance in rainfall. The model's learning curve (Figure \ref{fig:xgb_learning_curve}) shows convergence without overfitting.
+As the best-performing model, XGBoost achieved an RMSE of 23.64 mm and an R² of 0.847, indicating that it explains approximately 84.7\% of the variance in rainfall. The model's learning curve (Figure \ref{fig:chap4_fig9_xgb_learning_curve}) shows convergence without overfitting.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/XGBoost_learning_curve.png}
-\caption{XGBoost: Learning curve}
-\label{fig:xgb_learning_curve}
+\caption{Figure 4.9: XGBoost: Learning curve}
+\label{fig:chap4_fig9_xgb_learning_curve}
 \end{figure}
 
 \subsection{Random Forest Results}
@@ -1264,16 +1403,26 @@ As the best-performing model, XGBoost achieved an RMSE of 23.64 mm and an R² of
 
 Random Forest showed comparable performance to XGBoost, with an RMSE of 24.05 mm and an R² of 0.842. The feature importance ranking from Random Forest largely agreed with XGBoost, enhancing confidence in the identified key predictors.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reports/figures/placeholder_image.png} % Placeholder for RF Regression Predictions
+    \caption{Figure 4.11: Random Forest Regression Predictions}
+    \label{fig:chap4_fig11_rf_regression_predictions}
+\end{figure}
+
+\paragraph{Analysis of Figure \ref{fig:chap4_fig11_rf_regression_predictions}:}
+This figure plots actual vs. predicted yearly precipitation using Random Forest Regression. This regression task contrasts with classification figures. Analyze fit quality (e.g., alignment of blue dots and orange line) using RMSE/MAE, not AUC-ROC. Discuss input features’ (yearly averages) predictive power and suggest a PGFPlots scatter plot. The plot helps visualize how well the Random Forest regression model predicts yearly precipitation based on yearly averages of temperature, humidity, and wind speed.
+
 \subsection{ANN Results}
 \label{subsec:ann_results}
 
-The ANN model achieved an RMSE of 25.13 mm and an R² of 0.827. Figure \ref{fig:ann_training} shows the training history of the final optimized model.
+The ANN model achieved an RMSE of 25.13 mm and an R² of 0.827. Figure \ref{fig:chap4_fig10_ann_training_history} shows the training history of the final optimized model.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{reports/figures/ann_training_history.png}
-\caption{ANN: Training history}
-\label{fig:ann_training}
+\caption{Figure 4.10: ANN: Training history}
+\label{fig:chap4_fig10_ann_training_history}
 \end{figure}
 
 The training history indicates proper convergence with early stopping preventing overfitting. The model reached optimal validation loss after approximately 120 epochs.
