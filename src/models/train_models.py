@@ -1,3 +1,6 @@
+import os
+os.chdir("d:/Forecasting-rainfall-in-Selangor-by-using-machine-learning-techniques")
+
 from pathlib import Path
 import pickle
 import yaml
@@ -7,7 +10,7 @@ from sklearn.metrics import make_scorer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import logging
 import pandas as pd
-from src.utils.helpers import load_yaml
+from ..utils.helpers import load_yaml
 from .arima_model import ARIMAModel
 from .ann_model import ANNModel
 from .knn_model import KNNModel

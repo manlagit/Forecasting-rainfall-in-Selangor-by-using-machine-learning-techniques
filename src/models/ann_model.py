@@ -131,11 +131,16 @@ class ANNModel:
         # Run optimization
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=n_trials)
+
+        # Save study data to CSV
+        trials_df = study.trials_dataframe()
+        trials_df.to_csv("results/ann_optuna_study.csv", index=False)
+        self.logger.info("Optuna study data saved to results/ann_optuna_study.csv")
         
         self.best_params = study.best_params
         self.logger.info(f"Best ANN hyperparameters: {self.best_params}")
         
-        return self.best_params    
+        return self.best_params
     def train(self, X_train, y_train, X_val=None, y_val=None, optimize=True):
         """
         Train the ANN model
