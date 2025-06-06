@@ -21,6 +21,7 @@ class ModelEvaluator:
         self.logger = logging.getLogger(__name__)
         self.results = {}
         self.predictions = {}
+        self.classification_results = {}  # For storing ROC curve data
         self.logger.info("Initialized ModelEvaluator")
         
     def evaluate_classification(self, y_true: pd.Series, y_pred: pd.Series, model_name: str):
@@ -31,7 +32,7 @@ class ModelEvaluator:
         
         from sklearn.metrics import (
             accuracy_score, precision_score, recall_score, 
-            f1_score, roc_auc_score, confusion_matrix
+            f1_score, roc_auc_score, confusion_matrix, roc_curve
         )
         
         # Calculate metrics
@@ -40,11 +41,13 @@ class ModelEvaluator:
         rec = recall_score(y_true, y_pred)
         f1 = f1_score(y_true, y_pred)
         
+        # Compute ROC curve and AUC
         try:
-            # Try to calculate AUC if we have probabilities
             auc = roc_auc_score(y_true, y_pred)
+            fpr, tpr, _ = roc_curve(y_true, y_pred)
         except ValueError:
-            auc = 0.5  # Default to random chance if only one class present
+            auc = 0.5
+            fpr, tpr = [0], [0]
         
         # Store results
         self.results[model_name] = {
@@ -53,6 +56,13 @@ class ModelEvaluator:
             'Recall': rec,
             'F1': f1,
             'AUC': auc
+        }
+        
+        # Store ROC curve data for visualization
+        self.classification_results[model_name] = {
+            'fpr': fpr,
+            'tpr': tpr,
+            'roc_auc': auc
         }
         
         # Store predictions

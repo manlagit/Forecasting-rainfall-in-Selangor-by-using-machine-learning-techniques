@@ -1,0 +1,88 @@
+
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\geometry{a4paper, margin=1in}
+\title{Rainfall Occurrence Classification Report for Selangor}
+\author{Machine Learning Project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+This report summarizes the results of rainfall occurrence classification in Selangor using machine learning techniques. 
+The analysis focuses on predicting rain/no-rain events using meteorological data.
+
+\section{Key Findings}
+Based on our analysis of rainfall patterns in Selangor from 2012-2021, we found:
+\begin{itemize}
+    \item The best performing model was \textbf{xgboost} with an AUC of 0.602, Precision of 1.000, and Recall of 0.205.
+    \item Temperature emerged as the most significant predictor of rainfall occurrence.
+    \item Humidity and wind speed were also important features in classification.
+    \item The xgboost model demonstrated superior performance in capturing rainfall patterns.
+\end{itemize}
+
+\section{Model Comparison}
+The following table shows the classification metrics for each model:
+
+\begin{table}[h]
+\centering
+\caption{Model Performance Comparison}
+\begin{tabular}{lcccc}
+\toprule
+Model & AUC & Precision & Recall & F1 Score \\
+\midrule
+xgboost & 0.6024 & 1.0000 & 0.2048 & 0.3400 \\
+random\_forest & 0.5904 & 1.0000 & 0.1807 & 0.3061 \\
+knn & 0.5238 & 0.9583 & 0.1386 & 0.2421 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The best performing model is \textbf{xgboost}.
+
+\section{Visualizations}
+
+\subsection{ROC Curve}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{reports/figures\roc_curve_comparison.png}
+\caption{ROC Curve Comparison}
+\end{figure}
+
+\subsection{Confusion Matrix}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{reports/figures\xgboost_confusion_matrix.png}
+\caption{Confusion Matrix for xgboost}
+\end{figure}
+
+\subsection{Feature Importance}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{reports/figures\xgboost_feature_importance.png}
+\caption{Feature Importance for xgboost}
+\end{figure}
+
+\section{Practical Implementation}
+The developed rainfall classification system can be integrated into Selangor's water management infrastructure to:
+\begin{itemize}
+    \item Optimize reservoir operations based on rainfall predictions
+    \item Provide early warnings for potential flood events
+    \item Improve agricultural planning and irrigation scheduling
+    \item Enhance urban water distribution efficiency
+\end{itemize}
+
+\section{Limitations and Future Work}
+\begin{itemize}
+    \item Current model uses only meteorological station data - future versions could incorporate satellite imagery
+    \item Model performance could be improved with higher temporal resolution data
+    \item Integration with real-time monitoring systems would enhance practical utility
+    \item Expanding to other regions of Malaysia would increase applicability
+\end{itemize}
+
+\end{document}

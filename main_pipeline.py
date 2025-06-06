@@ -168,8 +168,8 @@ def main():
             f"{best_model_name}_confusion_matrix.png"
         )
         visualizer.plot_confusion_matrix(
-            evaluator.classification_results[best_model_name]['y_true'],
-            evaluator.classification_results[best_model_name]['y_pred'],
+            evaluator.predictions[best_model_name]['y_true'],
+            evaluator.predictions[best_model_name]['y_pred'],
             best_model_name,
             confusion_matrix_path
         )
@@ -196,8 +196,8 @@ def main():
         logger.info("Step 9: Generating classification report...")
         report_path = generate_latex_report(
             comparison_df, 
-            evaluator.classification_results[best_model_name]['y_true'],
-            evaluator.classification_results[best_model_name]['y_pred'],
+            evaluator.predictions[best_model_name]['y_true'],
+            evaluator.predictions[best_model_name]['y_pred'],
             best_model_name,
             feature_importance_path,
             roc_curve_path,

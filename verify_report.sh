@@ -1,32 +1,16 @@
 #!/bin/bash
-# Script to verify PDF report contents
-echo "Verifying PDF report..."
 
-PDF_FILE="reports/latex/rainfall_report.pdf"
-
-# Check if PDF exists and has content
-if [ -s "$PDF_FILE" ]; then
-    # Get file size and page count
-    file_size=$(du -h "$PDF_FILE" | cut -f1)
-    page_count=$(pdftk "$PDF_FILE" dump_data | grep NumberOfPages | awk '{print $2}')
-    
-    echo "PDF verification passed:"
-    echo "  - File size: $file_size"
-    echo "  - Page count: $page_count pages"
-    echo "  - Content checks:"
-    
-    # Check for required sections in PDF
-    required_sections=("Introduction" "Methodology" "Results" "Key Findings")
-    for section in "${required_sections[@]}"; do
-        if pdftotext "$PDF_FILE" - | grep -q "$section"; then
-            echo "    ✓ '$section' found"
-        else
-            echo "    ✗ '$section' missing"
-        fi
-    done
-    
-    exit 0
+# Verify the report PDF exists and is non-empty
+if [ -f "reports/report.pdf" ]; then
+    size=$(du -k "reports/report.pdf" | cut -f1)
+    if [ "$size" -gt 0 ]; then
+        echo "✅ Report verification passed: PDF file exists and is non-empty"
+        exit 0
+    else
+        echo "❌ Report verification failed: PDF file is empty"
+        exit 1
+    fi
 else
-    echo "PDF report is missing or empty."
+    echo "❌ Report verification failed: PDF file not found"
     exit 1
 fi

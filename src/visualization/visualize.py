@@ -105,16 +105,76 @@ class RainfallVisualizer:
         plt.savefig(output_path)
         plt.close()
         
-    def plot_feature_importance(self, feature_importances: pd.Series, 
-                               model_name: str, output_path: str):
+    def plot_roc_curve(self, classification_results, output_path):
         """
-        Plot feature importances for a model (if available).
+        Plot ROC curve for multiple models.
+
+        Args:
+            classification_results: dict, where keys are model names and values are dicts containing:
+                'fpr': array of false positive rates
+                'tpr': array of true positive rates
+                'roc_auc': AUC value
+            output_path: path to save the plot
         """
+        plt.figure(figsize=(10, 8))
+        for model_name, results in classification_results.items():
+            plt.plot(results['fpr'], results['tpr'], 
+                     label=f'{model_name} (AUC = {results["roc_auc"]:.2f})')
+        
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        plt.legend(loc="lower right")
+        plt.grid(True)
+        plt.savefig(output_path)
+        plt.close()
+        
+    def plot_confusion_matrix(self, y_true, y_pred, model_name, output_path):
+        """
+        Plot confusion matrix for a classification model.
+
+        Args:
+            y_true: true labels
+            y_pred: predicted labels
+            model_name: name of the model (for title)
+            output_path: path to save the plot
+        """
+        from sklearn.metrics import confusion_matrix
+        cm = confusion_matrix(y_true, y_pred)
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                    xticklabels=['No Rain', 'Rain'], 
+                    yticklabels=['No Rain', 'Rain'])
+        plt.title(f'Confusion Matrix - {model_name}')
+        plt.xlabel('Predicted')
+        plt.ylabel('Actual')
+        plt.savefig(output_path)
+        plt.close()
+        
+    def plot_feature_importance(self, model, feature_names, model_name, output_path):
+        """
+        Plot feature importances for a model that supports it.
+
+        Args:
+            model: trained model with feature_importances_ attribute
+            feature_names: list of feature names
+            model_name: name of the model (for title)
+            output_path: path to save the plot
+        """
+        if not hasattr(model, 'feature_importances_'):
+            raise ValueError(f"Model {model_name} does not support feature importance visualization")
+            
+        importances = model.feature_importances_
+        indices = importances.argsort()[::-1]
+        
         plt.figure(figsize=(12, 8))
-        feature_importances.sort_values(ascending=False).plot(kind='bar')
         plt.title(f'Feature Importance ({model_name})')
-        plt.xlabel('Features')
-        plt.ylabel('Importance')
+        plt.bar(range(len(importances)), importances[indices], align='center')
+        plt.xticks(range(len(importances)), [feature_names[i] for i in indices], rotation=90)
+        plt.xlim([-1, len(importances)])
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
