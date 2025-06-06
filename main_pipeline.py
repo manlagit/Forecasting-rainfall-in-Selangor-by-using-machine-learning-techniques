@@ -6,6 +6,7 @@ Orchestrates the complete workflow from data loading to report generation.
 import sys
 import logging
 import traceback
+import os
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -116,7 +117,11 @@ def main():
         # Step 7: Model Evaluation
         logger.info("Step 7: Evaluating models...")
         evaluator = ModelEvaluator()
-        
+
+        # Create binary classification target (rain/no-rain)
+        rain_threshold = 0.1  # 0.1mm precipitation threshold
+        y_test_binary = (y_test > rain_threshold).astype(int)
+
         # Evaluate each model
         for model_name, model in models.items():
             if model_name == 'ann':
@@ -124,66 +129,57 @@ def main():
             else:
                 y_pred = model.predict(X_test_scaled)
             
-            # Inverse transform predictions and actual values
-            # Convert to numpy array before reshaping
-            y_pred_array = y_pred.values if isinstance(y_pred, pd.Series) else y_pred
-            y_test_array = y_test_scaled.values if isinstance(y_test_scaled, pd.Series) else y_test_scaled
+            # Create binary predictions
+            y_pred_binary = (y_pred > rain_threshold).astype(int)
             
-            y_pred_inverse = preprocessor.target_scaler.inverse_transform(
-                y_pred_array.reshape(-1, 1)
-            ).flatten()
-            y_test_inverse = preprocessor.target_scaler.inverse_transform(
-                y_test_array.reshape(-1, 1)
-            ).flatten()
-            
-            evaluator.evaluate_model(y_test_inverse, y_pred_inverse, model_name)
-        
+            # Evaluate as classification problem
+            evaluator.evaluate_classification(
+                y_test_binary, 
+                y_pred_binary, 
+                model_name
+            )
+
         # Generate comparison and save results
-        comparison_df = evaluator.compare_models()
+        comparison_df = evaluator.compare_classification_models()
         evaluator.save_results("results")
-        
+
         # Print summary
-        print("\n" + evaluator.generate_summary_report())
+        print("\n" + evaluator.generate_classification_summary())
         
-        # Step 8: Generate Visualizations
-        logger.info("Step 8: Generating visualizations...")
+        # Step 8: Generate Classification Visualizations
+        logger.info("Step 8: Generating classification visualizations...")
         visualizer = RainfallVisualizer()
         
-        # Prepare data for visualization (include date and actual values)
-        df_processed = pd.concat([
-            df_raw.iloc[split_index:].reset_index(drop=True),
-            pd.Series(y_test_inverse, name='Precipitation_actual'),
-            pd.DataFrame({f"{model_name}_pred": evaluator.predictions[model_name]['pred'] 
-                         for model_name in models.keys()}, index=X_test.index)
-        ], axis=1)
-        
-        # Generate all plots
-        plot_paths = visualizer.generate_all_plots(
-            df_processed, 
-            comparison_df, 
-            evaluator.predictions,
-            "reports/figures"
-        )
-        logger.info(f"Generated {len(plot_paths)} visualization plots")
-        
-        # Step 9: Generate LaTeX Report
-        logger.info("Step 9: Generating LaTeX report...")
-        
-        # Get predictions for the best model
+        # Get the best model name
         best_model_name = comparison_df.index[0]
         best_model = models[best_model_name]
-        y_pred_best = evaluator.predictions[best_model_name]['pred']
         
-        # Generate additional visualizations for report
-        residual_plot_path = os.path.join("reports/figures", f"{best_model_name}_residuals.png")
-        visualizer.plot_residuals(
-            y_test_inverse, 
-            y_pred_best, 
-            best_model_name,
-            residual_plot_path
+        # Generate ROC curve for all models
+        roc_curve_path = os.path.join("reports/figures", "roc_curve_comparison.png")
+        visualizer.plot_roc_curve(
+            evaluator.classification_results, 
+            roc_curve_path
         )
-        
-        feature_importance_path = os.path.join("reports/figures", f"{best_model_name}_feature_importance.png")
+        logger.info(f"Generated ROC curve at: {roc_curve_path}")
+
+        # Generate confusion matrix for best model
+        confusion_matrix_path = os.path.join(
+            "reports/figures", 
+            f"{best_model_name}_confusion_matrix.png"
+        )
+        visualizer.plot_confusion_matrix(
+            evaluator.classification_results[best_model_name]['y_true'],
+            evaluator.classification_results[best_model_name]['y_pred'],
+            best_model_name,
+            confusion_matrix_path
+        )
+        logger.info(f"Generated confusion matrix at: {confusion_matrix_path}")
+
+        # Generate feature importance for best model
+        feature_importance_path = os.path.join(
+            "reports/figures", 
+            f"{best_model_name}_feature_importance.png"
+        )
         if hasattr(best_model, 'feature_importances_'):
             visualizer.plot_feature_importance(
                 best_model, 
@@ -191,18 +187,21 @@ def main():
                 best_model_name,
                 feature_importance_path
             )
+            logger.info(f"Generated feature importance plot at: {feature_importance_path}")
         else:
             logger.warning(f"Model {best_model_name} does not support feature importance visualization")
             feature_importance_path = "reports/figures/feature_importance_placeholder.png"
         
-        # Generate the LaTeX report file
+        # Step 9: Generate Classification Report
+        logger.info("Step 9: Generating classification report...")
         report_path = generate_latex_report(
             comparison_df, 
-            y_test_inverse, 
-            y_pred_best, 
+            evaluator.classification_results[best_model_name]['y_true'],
+            evaluator.classification_results[best_model_name]['y_pred'],
             best_model_name,
             feature_importance_path,
-            residual_plot_path,
+            roc_curve_path,
+            confusion_matrix_path,
             "reports/latex"
         )
         logger.info(f"Generated LaTeX report at: {report_path}")
@@ -220,11 +219,11 @@ def main():
         print(f"✓ Features engineered: {X.shape[1]} features")
         print(f"✓ Models trained: {len(models)}")
         print(
-            f"✓ Best model: {comparison_df.index[0]} "
-            f"(RMSE: {comparison_df.iloc[0]['RMSE']:.4f})"
+            f"✓ Best model: {best_model_name} "
+            f"(AUC: {comparison_df.loc[best_model_name, 'AUC']:.4f})"
         )
-        print(f"✓ Plots generated: {len(plot_paths)}")
-        print(f"✓ Report generated: {report_path}")
+        print(f"✓ Visualizations generated: ROC curve, confusion matrix, feature importance")
+        print(f"✓ Classification report generated: {report_path}")
         print(f"{'='*60}")
         
         return True
